@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//home/raphi/Android/**)",
+      "Read(//opt/**)",
+      "Read(//home/raphi/**)",
+      "Bash(gh auth:*)"
+    ]
+  }
+}

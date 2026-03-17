@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Paraglider silhouette (simplified) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,20 C35,20 20,30 20,42 C20,54 35,60 54,60 C73,60 88,54 88,42 C88,30 73,20 54,20 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,60 L48,85 L60,85 Z" />
+</vector>
