@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -33,6 +34,7 @@ fun AddEditFlightScreen(
     val gliders by viewModel.allGliders.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
+    // ── Formular-State ──────────────────────────────────────────────────────
     var selectedDateMillis by remember { mutableStateOf(System.currentTimeMillis()) }
     var gliderName by remember { mutableStateOf("") }
     var durationHours by remember { mutableStateOf("0") }
@@ -47,14 +49,14 @@ fun AddEditFlightScreen(
     var temperature by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
 
+    // Beim Bearbeiten vorhandene Daten laden
     LaunchedEffect(flightId) {
         if (flightId != null) {
             viewModel.getFlightById(flightId)?.let { flight ->
                 selectedDateMillis = flight.date
                 gliderName = flight.gliderName
-                val totalMin = flight.durationMinutes
-                durationHours = (totalMin / 60).toString()
-                durationMinutes = (totalMin % 60).toString()
+                durationHours = (flight.durationMinutes / 60).toString()
+                durationMinutes = (flight.durationMinutes % 60).toString()
                 flightType = FlightType.entries.find { it.name == flight.flightType } ?: FlightType.THERMAL
                 startLocation = flight.startLocation
                 landingLocation = flight.landingLocation
@@ -68,18 +70,75 @@ fun AddEditFlightScreen(
         }
     }
 
-    var gliderError by remember { mutableStateOf(false) }
+    // ── Validierungs-States ─────────────────────────────────────────────────
+
+    // Heute 23:59:59 in lokaler Zeit – Grenze für gültige Daten
+    val todayEndMillis = remember {
+        Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 59)
+            set(Calendar.SECOND, 59)
+            set(Calendar.MILLISECOND, 999)
+        }.timeInMillis
+    }
+    // Heute Mitternacht UTC – für den DatePicker (arbeitet intern mit UTC)
+    val todayUtcMidnight = remember {
+        Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+    }
+
+    val dateError by remember(selectedDateMillis) {
+        derivedStateOf { selectedDateMillis > todayEndMillis }
+    }
+    // Strecke: ungültig wenn nicht leer, nicht nur Punkt und kein gültiger Double
+    val distanceError by remember(distance) {
+        derivedStateOf {
+            distance.isNotBlank() && distance != "." && distance.toDoubleOrNull() == null
+        }
+    }
+    // Temperatur: ungültig wenn nicht leer, nicht nur Minus und kein gültiger Int
+    val temperatureError by remember(temperature) {
+        derivedStateOf {
+            temperature.isNotBlank() && temperature != "-" && temperature.toIntOrNull() == null
+        }
+    }
+    // Schirm: Pflichtfeld – Fehler wird erst nach erstem Speicherversuch gezeigt
+    var gliderTouched by remember { mutableStateOf(false) }
+    val gliderError = gliderTouched && gliderName.isBlank()
+
+    // Speichern-Button: aktiv nur wenn alle Validierungen bestehen
+    val canSave by remember(gliderName, dateError, distanceError, temperatureError) {
+        derivedStateOf {
+            gliderName.isNotBlank() && !dateError && !distanceError && !temperatureError
+        }
+    }
+
+    // ── UI-State ────────────────────────────────────────────────────────────
     var showDatePicker by remember { mutableStateOf(false) }
     var showGliderDropdown by remember { mutableStateOf(false) }
     var showFlightTypeDropdown by remember { mutableStateOf(false) }
 
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY) }
     val formattedDate = remember(selectedDateMillis) { dateFormat.format(Date(selectedDateMillis)) }
-    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDateMillis)
+
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = selectedDateMillis,
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                utcTimeMillis <= todayUtcMidnight
+
+            override fun isSelectableYear(year: Int): Boolean =
+                year <= Calendar.getInstance().get(Calendar.YEAR)
+        }
+    )
 
     fun validateAndSave() {
-        gliderError = gliderName.isBlank()
-        if (gliderError) return
+        gliderTouched = true
+        if (!canSave) return
 
         val totalMinutes = (durationHours.toIntOrNull() ?: 0) * 60 +
                 (durationMinutes.toIntOrNull() ?: 0)
@@ -107,6 +166,7 @@ fun AddEditFlightScreen(
         }
     }
 
+    // ── Scaffold ─────────────────────────────────────────────────────────────
     Scaffold(
         topBar = {
             TopAppBar(
@@ -122,11 +182,17 @@ fun AddEditFlightScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = ::validateAndSave) {
+                    TextButton(
+                        onClick = ::validateAndSave,
+                        enabled = canSave
+                    ) {
                         Text(
                             "Speichern",
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimary
+                            color = if (canSave)
+                                MaterialTheme.colorScheme.onPrimary
+                            else
+                                MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.38f)
                         )
                     }
                 },
@@ -150,10 +216,16 @@ fun AddEditFlightScreen(
         ) {
             SectionHeader("Pflichtfelder")
 
-            // Datum
+            // ── Datum ────────────────────────────────────────────────────────
             OutlinedCard(
                 onClick = { showDatePicker = true },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                border = if (dateError)
+                    CardDefaults.outlinedCardBorder().copy(
+                        brush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.error)
+                    )
+                else
+                    CardDefaults.outlinedCardBorder()
             ) {
                 Row(
                     modifier = Modifier
@@ -166,30 +238,44 @@ fun AddEditFlightScreen(
                         Text(
                             "Datum",
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            color = if (dateError) MaterialTheme.colorScheme.error
+                                    else MaterialTheme.colorScheme.primary
                         )
                         Text(
                             formattedDate,
                             style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            color = if (dateError) MaterialTheme.colorScheme.error
+                                    else Color.Unspecified
                         )
+                        if (dateError) {
+                            Text(
+                                "Das Datum darf nicht in der Zukunft liegen",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                     Icon(
                         Icons.Default.CalendarMonth,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = if (dateError) MaterialTheme.colorScheme.error
+                               else MaterialTheme.colorScheme.primary
                     )
                 }
             }
 
-            // Schirm mit Dropdown
+            // ── Schirm mit Dropdown ──────────────────────────────────────────
             ExposedDropdownMenuBox(
                 expanded = showGliderDropdown,
                 onExpandedChange = { showGliderDropdown = it }
             ) {
                 OutlinedTextField(
                     value = gliderName,
-                    onValueChange = { gliderName = it; gliderError = false },
+                    onValueChange = {
+                        gliderName = it
+                        gliderTouched = true
+                    },
                     label = { Text("Gleitschirm / Flügel *") },
                     placeholder = { Text("z.B. Advance Alpha 7") },
                     modifier = Modifier
@@ -213,6 +299,7 @@ fun AddEditFlightScreen(
                                 text = { Text(glider.name) },
                                 onClick = {
                                     gliderName = glider.name
+                                    gliderTouched = true
                                     showGliderDropdown = false
                                 }
                             )
@@ -221,11 +308,13 @@ fun AddEditFlightScreen(
                 }
             }
 
-            // Flugdauer
+            // ── Flugdauer ────────────────────────────────────────────────────
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = durationHours,
-                    onValueChange = { if (it.length <= 3 && it.all { c -> c.isDigit() }) durationHours = it },
+                    onValueChange = { input ->
+                        if (input.length <= 3 && input.all { it.isDigit() }) durationHours = input
+                    },
                     label = { Text("Stunden") },
                     modifier = Modifier.weight(1f),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -234,9 +323,9 @@ fun AddEditFlightScreen(
                 )
                 OutlinedTextField(
                     value = durationMinutes,
-                    onValueChange = {
-                        val v = it.toIntOrNull()
-                        if (it.isEmpty() || (v != null && v in 0..59)) durationMinutes = it
+                    onValueChange = { input ->
+                        val v = input.toIntOrNull()
+                        if (input.isEmpty() || (v != null && v in 0..59)) durationMinutes = input
                     },
                     label = { Text("Minuten") },
                     modifier = Modifier.weight(1f),
@@ -246,7 +335,7 @@ fun AddEditFlightScreen(
                 )
             }
 
-            // Flugart
+            // ── Flugart ──────────────────────────────────────────────────────
             ExposedDropdownMenuBox(
                 expanded = showFlightTypeDropdown,
                 onExpandedChange = { showFlightTypeDropdown = it }
@@ -292,9 +381,9 @@ fun AddEditFlightScreen(
             Spacer(modifier = Modifier.height(4.dp))
             HorizontalDivider()
             Spacer(modifier = Modifier.height(4.dp))
-
             SectionHeader("Optionale Angaben")
 
+            // ── Start- & Landeplatz ──────────────────────────────────────────
             OutlinedTextField(
                 value = startLocation,
                 onValueChange = { startLocation = it },
@@ -312,10 +401,18 @@ fun AddEditFlightScreen(
                 singleLine = true
             )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // ── Höhe & Strecke ────────────────────────────────────────────────
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Höhe: nur positive Ganzzahlen – ungültige Zeichen werden still gefiltert
                 OutlinedTextField(
                     value = maxAltitude,
-                    onValueChange = { if (it.all { c -> c.isDigit() }) maxAltitude = it },
+                    onValueChange = { input ->
+                        val filtered = input.filter { it.isDigit() }
+                        maxAltitude = filtered
+                    },
                     label = { Text("Max. Höhe") },
                     modifier = Modifier.weight(1f),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -323,12 +420,31 @@ fun AddEditFlightScreen(
                     leadingIcon = { Icon(Icons.Default.Height, null) },
                     singleLine = true
                 )
+                // Strecke: Dezimalzahl – Komma wird zu Punkt normalisiert
                 OutlinedTextField(
                     value = distance,
-                    onValueChange = { distance = it },
+                    onValueChange = { input ->
+                        val filtered = buildString {
+                            var hasDot = false
+                            for (c in input) {
+                                when {
+                                    c.isDigit() -> append(c)
+                                    (c == '.' || c == ',') && !hasDot -> {
+                                        append('.')
+                                        hasDot = true
+                                    }
+                                }
+                            }
+                        }
+                        distance = filtered
+                    },
                     label = { Text("Strecke") },
                     modifier = Modifier.weight(1f),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    isError = distanceError,
+                    supportingText = if (distanceError) ({
+                        Text("Bitte nur Zahlen eingeben")
+                    }) else null,
                     trailingIcon = { Text("km", modifier = Modifier.padding(end = 4.dp)) },
                     leadingIcon = { Icon(Icons.Default.Route, null) },
                     singleLine = true
@@ -347,7 +463,11 @@ fun AddEditFlightScreen(
                 placeholder = { Text("z.B. NW 15 km/h, böig") },
                 singleLine = true
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 OutlinedTextField(
                     value = cloudCover,
                     onValueChange = { cloudCover = it },
@@ -357,12 +477,27 @@ fun AddEditFlightScreen(
                     placeholder = { Text("z.B. 3/8") },
                     singleLine = true
                 )
+                // Temperatur: ganze Zahl, auch negativ
                 OutlinedTextField(
                     value = temperature,
-                    onValueChange = { temperature = it },
+                    onValueChange = { input ->
+                        val filtered = buildString {
+                            for ((i, c) in input.withIndex()) {
+                                when {
+                                    c.isDigit() -> append(c)
+                                    c == '-' && i == 0 -> append(c)
+                                }
+                            }
+                        }
+                        temperature = filtered
+                    },
                     label = { Text("Temperatur") },
                     modifier = Modifier.weight(1f),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = temperatureError,
+                    supportingText = if (temperatureError) ({
+                        Text("Bitte nur Zahlen eingeben")
+                    }) else null,
                     trailingIcon = { Text("°C", modifier = Modifier.padding(end = 4.dp)) },
                     leadingIcon = { Icon(Icons.Default.Thermostat, null) },
                     singleLine = true
@@ -387,7 +522,8 @@ fun AddEditFlightScreen(
 
             Button(
                 onClick = ::validateAndSave,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = canSave
             ) {
                 Icon(Icons.Default.Save, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
@@ -396,14 +532,19 @@ fun AddEditFlightScreen(
         }
     }
 
+    // ── DatePicker-Dialog ────────────────────────────────────────────────────
     if (showDatePicker) {
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { selectedDateMillis = it }
-                    showDatePicker = false
-                }) { Text("OK") }
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            selectedDateMillis = millis
+                        }
+                        showDatePicker = false
+                    }
+                ) { Text("OK") }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) { Text("Abbrechen") }
