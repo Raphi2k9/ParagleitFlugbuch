@@ -20,12 +20,29 @@ data class GliderStats(
     val totalMinutes: Int
 )
 
+data class DistanceStats(
+    val totalKm: Double,
+    val avgKm: Double,
+    val maxKm: Double,
+    val byGlider: List<Pair<String, Double>>,
+    val byMonth: Map<String, Double>
+)
+
+data class AltitudeStats(
+    val globalMaxAlt: Int,
+    val avgMaxAlt: Double,
+    val maxByGlider: List<Pair<String, Int>>,
+    val byMonth: Map<String, Int>
+)
+
 data class StatisticsData(
     val totalFlights: Int = 0,
     val totalMinutes: Int = 0,
     val typeStats: List<FlightTypeStats> = emptyList(),
     val gliderStats: List<GliderStats> = emptyList(),
-    val flightsByMonth: Map<String, Int> = emptyMap()
+    val flightsByMonth: Map<String, Int> = emptyMap(),
+    val distanceStats: DistanceStats? = null,
+    val altitudeStats: AltitudeStats? = null
 )
 
 class StatisticsViewModel(application: Application) : AndroidViewModel(application) {
@@ -39,7 +56,6 @@ class StatisticsViewModel(application: Application) : AndroidViewModel(applicati
 
             val totalMinutes = flights.sumOf { it.durationMinutes }
 
-            // Stats per Flugart
             val typeStats = FlightType.entries.mapNotNull { type ->
                 val typeFlights = flights.filter { it.flightType == type.name }
                 if (typeFlights.isEmpty()) null
@@ -50,7 +66,6 @@ class StatisticsViewModel(application: Application) : AndroidViewModel(applicati
                 )
             }
 
-            // Stats per Schirm
             val gliderStats = flights
                 .groupBy { it.gliderName }
                 .map { (name, gliderFlights) ->
@@ -62,27 +77,67 @@ class StatisticsViewModel(application: Application) : AndroidViewModel(applicati
                 }
                 .sortedByDescending { it.count }
 
-            // Flüge pro Monat (letzte 12 Monate)
             val calendar = java.util.Calendar.getInstance()
+            fun monthKey(millis: Long): String {
+                calendar.timeInMillis = millis
+                return "%04d-%02d".format(
+                    calendar.get(java.util.Calendar.YEAR),
+                    calendar.get(java.util.Calendar.MONTH) + 1
+                )
+            }
+
             val flightsByMonth = flights
-                .groupBy {
-                    calendar.timeInMillis = it.date
-                    val year = calendar.get(java.util.Calendar.YEAR)
-                    val month = calendar.get(java.util.Calendar.MONTH) + 1
-                    "%04d-%02d".format(year, month)
-                }
+                .groupBy { monthKey(it.date) }
                 .mapValues { it.value.size }
-                .entries
-                .sortedBy { it.key }
+                .entries.sortedBy { it.key }
                 .takeLast(12)
                 .associate { it.key to it.value }
+
+            // Distanz-Statistiken
+            val flightsWithDistance = flights.filter { (it.distance ?: 0.0) > 0.0 }
+            val distanceStats = if (flightsWithDistance.isNotEmpty()) {
+                val totalKm = flightsWithDistance.sumOf { it.distance!! }
+                val avgKm = totalKm / flightsWithDistance.size
+                val maxKm = flightsWithDistance.maxOf { it.distance!! }
+                val byGlider = flightsWithDistance
+                    .groupBy { it.gliderName }
+                    .map { (name, gFlights) -> name to gFlights.sumOf { it.distance!! } }
+                    .sortedByDescending { it.second }
+                val byMonth = flightsWithDistance
+                    .groupBy { monthKey(it.date) }
+                    .mapValues { entry -> entry.value.sumOf { it.distance!! } }
+                    .entries.sortedBy { it.key }
+                    .takeLast(12)
+                    .associate { it.key to it.value }
+                DistanceStats(totalKm, avgKm, maxKm, byGlider, byMonth)
+            } else null
+
+            // Höhen-Statistiken
+            val flightsWithAlt = flights.filter { (it.maxAltitude ?: 0) > 0 }
+            val altitudeStats = if (flightsWithAlt.isNotEmpty()) {
+                val globalMax = flightsWithAlt.maxOf { it.maxAltitude!! }
+                val avgMax = flightsWithAlt.sumOf { it.maxAltitude!! }.toDouble() / flightsWithAlt.size
+                val maxByGlider = flightsWithAlt
+                    .groupBy { it.gliderName }
+                    .map { (name, gFlights) -> name to gFlights.maxOf { it.maxAltitude!! } }
+                    .sortedByDescending { it.second }
+                val byMonth = flightsWithAlt
+                    .groupBy { monthKey(it.date) }
+                    .mapValues { entry -> entry.value.maxOf { it.maxAltitude!! } }
+                    .entries.sortedBy { it.key }
+                    .takeLast(12)
+                    .associate { it.key to it.value }
+                AltitudeStats(globalMax, avgMax, maxByGlider, byMonth)
+            } else null
 
             StatisticsData(
                 totalFlights = flights.size,
                 totalMinutes = totalMinutes,
                 typeStats = typeStats,
                 gliderStats = gliderStats,
-                flightsByMonth = flightsByMonth
+                flightsByMonth = flightsByMonth,
+                distanceStats = distanceStats,
+                altitudeStats = altitudeStats
             )
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StatisticsData())

@@ -16,7 +16,7 @@ import com.example.flugbuch.data.entities.FlightType
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(dExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FlightCard(
     flight: FlightEntity,

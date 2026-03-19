@@ -33,7 +33,6 @@ fun AddEditFlightScreen(
     val gliders by viewModel.allGliders.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
-    // Formular-State
     var selectedDateMillis by remember { mutableStateOf(System.currentTimeMillis()) }
     var gliderName by remember { mutableStateOf("") }
     var durationHours by remember { mutableStateOf("0") }
@@ -48,7 +47,6 @@ fun AddEditFlightScreen(
     var temperature by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
 
-    // Vorhandenen Flug laden
     LaunchedEffect(flightId) {
         if (flightId != null) {
             viewModel.getFlightById(flightId)?.let { flight ->
@@ -70,17 +68,13 @@ fun AddEditFlightScreen(
         }
     }
 
-    // Validierung
     var gliderError by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showGliderDropdown by remember { mutableStateOf(false) }
     var showFlightTypeDropdown by remember { mutableStateOf(false) }
 
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY) }
-    val formattedDate = remember(selectedDateMillis) {
-        dateFormat.format(Date(selectedDateMillis))
-    }
-
+    val formattedDate = remember(selectedDateMillis) { dateFormat.format(Date(selectedDateMillis)) }
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDateMillis)
 
     fun validateAndSave() {
@@ -129,12 +123,18 @@ fun AddEditFlightScreen(
                 },
                 actions = {
                     TextButton(onClick = ::validateAndSave) {
-                        Text("Speichern", fontWeight = FontWeight.Bold)
+                        Text(
+                            "Speichern",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         }
@@ -143,11 +143,11 @@ fun AddEditFlightScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // --- PFLICHTFELDER ---
             SectionHeader("Pflichtfelder")
 
             // Datum
@@ -289,14 +289,12 @@ fun AddEditFlightScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             HorizontalDivider()
             Spacer(modifier = Modifier.height(4.dp))
 
-            // --- OPTIONALE FELDER ---
             SectionHeader("Optionale Angaben")
 
-            // Start- und Landeplatz
             OutlinedTextField(
                 value = startLocation,
                 onValueChange = { startLocation = it },
@@ -314,7 +312,6 @@ fun AddEditFlightScreen(
                 singleLine = true
             )
 
-            // Höhe und Strecke
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = maxAltitude,
@@ -338,8 +335,9 @@ fun AddEditFlightScreen(
                 )
             }
 
-            // Wetterbedingungen
+            HorizontalDivider()
             SectionHeader("Wetterbedingungen")
+
             OutlinedTextField(
                 value = windConditions,
                 onValueChange = { windConditions = it },
@@ -371,8 +369,9 @@ fun AddEditFlightScreen(
                 )
             }
 
-            // Notizen
+            HorizontalDivider()
             SectionHeader("Notizen")
+
             OutlinedTextField(
                 value = notes,
                 onValueChange = { notes = it },
@@ -384,9 +383,8 @@ fun AddEditFlightScreen(
                 leadingIcon = { Icon(Icons.Default.Notes, null) }
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Speichern-Button
             Button(
                 onClick = ::validateAndSave,
                 modifier = Modifier.fillMaxWidth()
@@ -398,15 +396,12 @@ fun AddEditFlightScreen(
         }
     }
 
-    // Date Picker Dialog
     if (showDatePicker) {
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let {
-                        selectedDateMillis = it
-                    }
+                    datePickerState.selectedDateMillis?.let { selectedDateMillis = it }
                     showDatePicker = false
                 }) { Text("OK") }
             },

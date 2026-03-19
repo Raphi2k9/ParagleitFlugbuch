@@ -16,13 +16,16 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.flugbuch.viewmodel.AltitudeStats
+import com.example.flugbuch.viewmodel.DistanceStats
 import com.example.flugbuch.viewmodel.FlightTypeStats
 import com.example.flugbuch.viewmodel.GliderStats
 import com.example.flugbuch.viewmodel.StatisticsViewModel
@@ -45,8 +48,10 @@ fun StatisticsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         }
@@ -86,6 +91,16 @@ fun StatisticsScreen(
                 StatCard(title = "Flüge pro Monat") {
                     MonthlyBarChart(stats.flightsByMonth)
                 }
+            }
+
+            // Distanz-Statistiken
+            stats.distanceStats?.let { dist ->
+                DistanceStatsSection(dist)
+            }
+
+            // Höhen-Statistiken
+            stats.altitudeStats?.let { alt ->
+                AltitudeStatsSection(alt)
             }
         }
     }
@@ -254,7 +269,6 @@ private fun FlightTypeChart(typeStats: List<FlightTypeStats>) {
 @Composable
 private fun GliderStatsTable(gliderStats: List<GliderStats>) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // Header
         Row(modifier = Modifier.fillMaxWidth()) {
             Text("Schirm", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
             Text("Flüge", modifier = Modifier.width(50.dp), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
@@ -313,7 +327,6 @@ private fun MonthlyBarChart(flightsByMonth: Map<String, Int>) {
                     cornerRadius = CornerRadius(4.dp.toPx())
                 )
 
-                // Monatslabel (nur MM)
                 drawContext.canvas.nativeCanvas.drawText(
                     month.takeLast(2),
                     x + barWidth / 2,
@@ -335,4 +348,242 @@ private fun MonthlyBarChart(flightsByMonth: Map<String, Int>) {
         modifier = Modifier.fillMaxWidth(),
         textAlign = TextAlign.Center
     )
+}
+
+// ─── Distanz-Statistiken ────────────────────────────────────────────────────
+
+@Composable
+private fun DistanceStatsSection(dist: DistanceStats) {
+    // Übersicht-Karten
+    StatCard(title = "Distanz") {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            MiniStatCard(
+                modifier = Modifier.weight(1f),
+                value = "%.1f km".format(dist.totalKm),
+                label = "Gesamt",
+                containerColor = MaterialTheme.colorScheme.primaryContainer
+            )
+            MiniStatCard(
+                modifier = Modifier.weight(1f),
+                value = "%.1f km".format(dist.avgKm),
+                label = "Ø pro Flug",
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
+            )
+            MiniStatCard(
+                modifier = Modifier.weight(1f),
+                value = "%.1f km".format(dist.maxKm),
+                label = "Längstes",
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer
+            )
+        }
+
+        if (dist.byGlider.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Text("Distanz pro Schirm", style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.height(8.dp))
+            val maxDist = dist.byGlider.maxOf { it.second }.coerceAtLeast(0.001)
+            dist.byGlider.take(5).forEach { (name, km) ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(name, modifier = Modifier.width(110.dp), style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                    Box(modifier = Modifier.weight(1f).height(20.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth((km / maxDist).toFloat().coerceIn(0f, 1f))
+                                .background(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                    MaterialTheme.shapes.small
+                                )
+                        )
+                    }
+                    Text("%.1f".format(km), modifier = Modifier.width(55.dp), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.End)
+                }
+                Spacer(Modifier.height(4.dp))
+            }
+        }
+
+        if (dist.byMonth.size >= 2) {
+            Spacer(Modifier.height(12.dp))
+            Text("Distanz pro Monat", style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.height(8.dp))
+            SimpleLineChart(
+                data = dist.byMonth.entries.map { it.key to it.value.toFloat() },
+                lineColor = MaterialTheme.colorScheme.primary,
+                unit = "km",
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+// ─── Höhen-Statistiken ───────────────────────────────────────────────────────
+
+@Composable
+private fun AltitudeStatsSection(alt: AltitudeStats) {
+    StatCard(title = "Höhe") {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            MiniStatCard(
+                modifier = Modifier.weight(1f),
+                value = "${alt.globalMaxAlt} m",
+                label = "Höchste",
+                containerColor = MaterialTheme.colorScheme.primaryContainer
+            )
+            MiniStatCard(
+                modifier = Modifier.weight(1f),
+                value = "%.0f m".format(alt.avgMaxAlt),
+                label = "Ø Max-Höhe",
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
+            )
+        }
+
+        if (alt.maxByGlider.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Text("Höchste Höhe pro Schirm", style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.height(8.dp))
+            val maxAlt = alt.maxByGlider.maxOf { it.second }.coerceAtLeast(1)
+            alt.maxByGlider.take(5).forEach { (name, altM) ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(name, modifier = Modifier.width(110.dp), style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                    Box(modifier = Modifier.weight(1f).height(20.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(altM.toFloat() / maxAlt)
+                                .background(
+                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f),
+                                    MaterialTheme.shapes.small
+                                )
+                        )
+                    }
+                    Text("$altM m", modifier = Modifier.width(55.dp), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.End)
+                }
+                Spacer(Modifier.height(4.dp))
+            }
+        }
+
+        if (alt.byMonth.size >= 2) {
+            Spacer(Modifier.height(12.dp))
+            Text("Max. Höhe pro Monat", style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.height(8.dp))
+            SimpleLineChart(
+                data = alt.byMonth.entries.map { it.key to it.value.toFloat() },
+                lineColor = MaterialTheme.colorScheme.secondary,
+                unit = "m",
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+@Composable
+private fun MiniStatCard(
+    modifier: Modifier = Modifier,
+    value: String,
+    label: String,
+    containerColor: Color
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = containerColor)
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp).fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            Text(label, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+@Composable
+private fun SimpleLineChart(
+    data: List<Pair<String, Float>>,
+    lineColor: Color,
+    unit: String,
+    modifier: Modifier = Modifier
+) {
+    if (data.isEmpty()) return
+
+    val maxValue = data.maxOf { it.second }.coerceAtLeast(0.001f)
+    val labelColor = MaterialTheme.colorScheme.onSurface
+    val fillColor = lineColor.copy(alpha = 0.15f)
+
+    Column(modifier = modifier) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(110.dp)
+        ) {
+            if (data.size < 2) {
+                drawCircle(lineColor, 6.dp.toPx(), Offset(size.width / 2f, size.height / 2f))
+                return@Canvas
+            }
+
+            val stepX = size.width / (data.size - 1).toFloat()
+            val points = data.mapIndexed { i, (_, v) ->
+                Offset(i * stepX, size.height * (1f - v / maxValue))
+            }
+
+            // Fläche unter der Linie
+            val fillPath = Path().apply {
+                moveTo(points.first().x, size.height)
+                points.forEach { lineTo(it.x, it.y) }
+                lineTo(points.last().x, size.height)
+                close()
+            }
+            drawPath(fillPath, fillColor)
+
+            // Linie
+            val linePath = Path().apply {
+                moveTo(points.first().x, points.first().y)
+                for (i in 1 until points.size) lineTo(points[i].x, points[i].y)
+            }
+            drawPath(linePath, lineColor, style = Stroke(width = 2.dp.toPx()))
+
+            // Punkte
+            points.forEach { drawCircle(lineColor, 3.dp.toPx(), it) }
+
+            // Y-Achse Labels (Max und Min)
+            val paint = android.graphics.Paint().apply {
+                color = labelColor.copy(alpha = 0.6f).toArgb()
+                textSize = 9.dp.toPx()
+            }
+            drawContext.canvas.nativeCanvas.drawText(
+                "%.0f $unit".format(maxValue),
+                4.dp.toPx(), 12.dp.toPx(), paint
+            )
+        }
+
+        // X-Achse Labels
+        if (data.size <= 6) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                data.forEach { (label, _) ->
+                    Text(label.takeLast(5), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                }
+            }
+        } else {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text(data.first().first.takeLast(5), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                Spacer(Modifier.weight(1f))
+                Text(data[data.size / 2].first.takeLast(5), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                Spacer(Modifier.weight(1f))
+                Text(data.last().first.takeLast(5), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+            }
+        }
+    }
 }

@@ -1,15 +1,20 @@
 package com.example.flugbuch.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -17,9 +22,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.flugbuch.data.entities.FlightType
 import com.example.flugbuch.ui.components.FlightCard
 import com.example.flugbuch.viewmodel.FilterState
-import com.example.flugbuch.viewmodel.FilterType
 import com.example.flugbuch.viewmodel.FlightViewModel
 import com.example.flugbuch.viewmodel.SortOrder
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,8 +43,9 @@ fun FlightListScreen(
     var showFilterSheet by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
 
-    // Snackbar
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     LaunchedEffect(message) {
         message?.let {
             snackbarHostState.showSnackbar(it)
@@ -55,18 +61,31 @@ fun FlightListScreen(
                         Text("Flugbuch", fontWeight = FontWeight.Bold)
                         Text(
                             "${flights.size} Flüge",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            style = MaterialTheme.typography.labelSmall
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 actions = {
+                    // Filter-Badge wenn aktiv
                     IconButton(onClick = { showFilterSheet = true }) {
-                        Icon(Icons.Default.FilterList, contentDescription = "Filter & Sortierung")
+                        BadgedBox(
+                            badge = {
+                                if (filterState.isFiltered) {
+                                    Badge()
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Default.FilterList, contentDescription = "Filter & Sortierung")
+                        }
+                    }
+                    IconButton(onClick = { onNavigateToStats() }) {
+                        Icon(Icons.Default.BarChart, contentDescription = "Statistiken")
                     }
                     IconButton(onClick = { showMenu = true }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "Menü")
@@ -75,11 +94,6 @@ fun FlightListScreen(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("Statistiken") },
-                            leadingIcon = { Icon(Icons.Default.BarChart, null) },
-                            onClick = { showMenu = false; onNavigateToStats() }
-                        )
                         DropdownMenuItem(
                             text = { Text("Export / Import") },
                             leadingIcon = { Icon(Icons.Default.ImportExport, null) },
@@ -114,21 +128,19 @@ fun FlightListScreen(
                     start = 16.dp,
                     end = 16.dp,
                     top = 8.dp,
-                    bottom = 88.dp  // FAB-Abstand
+                    bottom = 88.dp
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Aktive Filter anzeigen
-                if (filterState.filterType != FilterType.ALL) {
+                if (filterState.isFiltered) {
                     item {
-                        ActiveFilterChip(
+                        ActiveFilterChips(
                             filterState = filterState,
                             onClear = {
                                 viewModel.updateFilterState(
                                     filterState.copy(
-                                        filterType = FilterType.ALL,
-                                        selectedFlightType = null,
-                                        selectedGlider = null
+                                        selectedFlightTypes = emptySet(),
+                                        selectedGliders = emptySet()
                                     )
                                 )
                             }
@@ -140,17 +152,77 @@ fun FlightListScreen(
                     items = flights,
                     key = { it.id }
                 ) { flight ->
-                    FlightCard(
-                        flight = flight,
-                        onClick = { onEditFlight(flight.id) },
-                        onLongClick = { viewModel.deleteFlight(flight) }
+                    val swipeState = rememberSwipeToDismissBoxState(
+                        confirmValueChange = { value ->
+                            value == SwipeToDismissBoxValue.EndToStart
+                        }
                     )
+
+                    LaunchedEffect(swipeState.currentValue) {
+                        if (swipeState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                            val result = snackbarHostState.showSnackbar(
+                                message = "Flug gelöscht",
+                                actionLabel = "Rückgängig",
+                                duration = SnackbarDuration.Short
+                            )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                swipeState.reset()
+                            } else {
+                                viewModel.deleteFlight(flight)
+                            }
+                        }
+                    }
+
+                    SwipeToDismissBox(
+                        state = swipeState,
+                        enableDismissFromStartToEnd = false,
+                        backgroundContent = {
+                            val bgColor by animateColorAsState(
+                                targetValue = when (swipeState.targetValue) {
+                                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+                                    else -> Color.Transparent
+                                },
+                                label = "swipe_bg"
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(bgColor, shape = MaterialTheme.shapes.medium)
+                                    .padding(horizontal = 20.dp),
+                                contentAlignment = Alignment.CenterEnd
+                            ) {
+                                if (swipeState.targetValue == SwipeToDismissBoxValue.EndToStart) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "Löschen",
+                                        tint = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                            }
+                        }
+                    ) {
+                        FlightCard(
+                            flight = flight,
+                            onClick = { onEditFlight(flight.id) },
+                            onLongClick = {
+                                scope.launch {
+                                    val result = snackbarHostState.showSnackbar(
+                                        message = "Flug löschen?",
+                                        actionLabel = "Löschen",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                    if (result == SnackbarResult.ActionPerformed) {
+                                        viewModel.deleteFlight(flight)
+                                    }
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
     }
 
-    // Filter Bottom Sheet
     if (showFilterSheet) {
         FilterSortSheet(
             filterState = filterState,
@@ -194,17 +266,36 @@ private fun EmptyFlightList(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun ActiveFilterChip(filterState: FilterState, onClear: () -> Unit) {
-    val label = when (filterState.filterType) {
-        FilterType.BY_TYPE -> "Flugart: ${filterState.selectedFlightType?.displayName}"
-        FilterType.BY_GLIDER -> "Schirm: ${filterState.selectedGlider}"
-        FilterType.ALL -> ""
+private fun ActiveFilterChips(filterState: FilterState, onClear: () -> Unit) {
+    val parts = buildList {
+        if (filterState.selectedFlightTypes.isNotEmpty()) {
+            add(
+                if (filterState.selectedFlightTypes.size == 1)
+                    filterState.selectedFlightTypes.first().displayName
+                else
+                    "${filterState.selectedFlightTypes.size} Flugarten"
+            )
+        }
+        if (filterState.selectedGliders.isNotEmpty()) {
+            add(
+                if (filterState.selectedGliders.size == 1)
+                    filterState.selectedGliders.first()
+                else
+                    "${filterState.selectedGliders.size} Schirme"
+            )
+        }
     }
     InputChip(
         selected = true,
         onClick = onClear,
-        label = { Text(label) },
-        trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Filter entfernen", modifier = Modifier.size(16.dp)) }
+        label = { Text("Filter: ${parts.joinToString(", ")}") },
+        trailingIcon = {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Filter entfernen",
+                modifier = Modifier.size(16.dp)
+            )
+        }
     )
 }
 
@@ -222,6 +313,7 @@ private fun FilterSortSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 32.dp)
         ) {
@@ -230,12 +322,15 @@ private fun FilterSortSheet(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // Sortierung
+            // --- Sortierung ---
             Text("Sortierung", style = MaterialTheme.typography.labelLarge)
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Spacer(Modifier.height(8.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 SortOrder.entries.forEach { order ->
                     val label = when (order) {
                         SortOrder.DATE_DESC -> "Datum ↓"
@@ -251,70 +346,145 @@ private fun FilterSortSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
             HorizontalDivider()
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // Filter nach Flugart
-            Text("Filter nach Flugart", style = MaterialTheme.typography.labelLarge)
-            Spacer(modifier = Modifier.height(8.dp))
+            // --- Multi-Select: Flugart ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                FilterChip(
-                    selected = localState.filterType == FilterType.ALL,
-                    onClick = {
-                        localState = localState.copy(
-                            filterType = FilterType.ALL,
-                            selectedFlightType = null
-                        )
-                    },
-                    label = { Text("Alle") }
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            FlightType.entries.forEach { type ->
-                FilterChip(
-                    selected = localState.filterType == FilterType.BY_TYPE && localState.selectedFlightType == type,
-                    onClick = {
-                        localState = localState.copy(
-                            filterType = FilterType.BY_TYPE,
-                            selectedFlightType = type
-                        )
-                    },
-                    label = { Text(type.displayName) }
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-
-            if (gliders.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Filter nach Schirm", style = MaterialTheme.typography.labelLarge)
-                Spacer(modifier = Modifier.height(8.dp))
-                gliders.forEach { glider ->
-                    FilterChip(
-                        selected = localState.filterType == FilterType.BY_GLIDER && localState.selectedGlider == glider,
-                        onClick = {
-                            localState = localState.copy(
-                                filterType = FilterType.BY_GLIDER,
-                                selectedGlider = glider
-                            )
-                        },
-                        label = { Text(glider) }
+                Text("Filter nach Flugart", style = MaterialTheme.typography.labelLarge)
+                TextButton(onClick = {
+                    localState = if (localState.selectedFlightTypes.size == FlightType.entries.size) {
+                        localState.copy(selectedFlightTypes = emptySet())
+                    } else {
+                        localState.copy(selectedFlightTypes = FlightType.entries.toSet())
+                    }
+                }) {
+                    Text(
+                        if (localState.selectedFlightTypes.size == FlightType.entries.size)
+                            "Alle abwählen"
+                        else
+                            "Alle auswählen"
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                }
+            }
+            FlightType.entries.forEach { type ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            localState = localState.copy(
+                                selectedFlightTypes = if (type in localState.selectedFlightTypes)
+                                    localState.selectedFlightTypes - type
+                                else
+                                    localState.selectedFlightTypes + type
+                            )
+                        }
+                        .padding(vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = type in localState.selectedFlightTypes,
+                        onCheckedChange = { checked ->
+                            localState = localState.copy(
+                                selectedFlightTypes = if (checked)
+                                    localState.selectedFlightTypes + type
+                                else
+                                    localState.selectedFlightTypes - type
+                            )
+                        }
+                    )
+                    Column {
+                        Text(type.displayName, style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            type.description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = { onApply(localState) },
+            if (gliders.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(16.dp))
+
+                // --- Multi-Select: Schirm ---
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Filter nach Schirm", style = MaterialTheme.typography.labelLarge)
+                    TextButton(onClick = {
+                        localState = if (localState.selectedGliders.size == gliders.size) {
+                            localState.copy(selectedGliders = emptySet())
+                        } else {
+                            localState.copy(selectedGliders = gliders.toSet())
+                        }
+                    }) {
+                        Text(
+                            if (localState.selectedGliders.size == gliders.size)
+                                "Alle abwählen"
+                            else
+                                "Alle auswählen"
+                        )
+                    }
+                }
+                gliders.forEach { glider ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                localState = localState.copy(
+                                    selectedGliders = if (glider in localState.selectedGliders)
+                                        localState.selectedGliders - glider
+                                    else
+                                        localState.selectedGliders + glider
+                                )
+                            }
+                            .padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = glider in localState.selectedGliders,
+                            onCheckedChange = { checked ->
+                                localState = localState.copy(
+                                    selectedGliders = if (checked)
+                                        localState.selectedGliders + glider
+                                    else
+                                        localState.selectedGliders - glider
+                                )
+                            }
+                        )
+                        Text(glider, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Anwenden")
+                OutlinedButton(
+                    onClick = { localState = FilterState() },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Zurücksetzen")
+                }
+                Button(
+                    onClick = { onApply(localState) },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Anwenden")
+                }
             }
         }
     }

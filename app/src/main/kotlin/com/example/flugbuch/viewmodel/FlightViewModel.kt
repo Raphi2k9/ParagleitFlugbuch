@@ -16,14 +16,14 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 enum class SortOrder { DATE_DESC, DATE_ASC, TYPE, GLIDER }
-enum class FilterType { ALL, BY_TYPE, BY_GLIDER }
 
 data class FilterState(
     val sortOrder: SortOrder = SortOrder.DATE_DESC,
-    val filterType: FilterType = FilterType.ALL,
-    val selectedFlightType: FlightType? = null,
-    val selectedGlider: String? = null
-)
+    val selectedFlightTypes: Set<FlightType> = emptySet(),
+    val selectedGliders: Set<String> = emptySet()
+) {
+    val isFiltered: Boolean get() = selectedFlightTypes.isNotEmpty() || selectedGliders.isNotEmpty()
+}
 
 class FlightViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -44,20 +44,15 @@ class FlightViewModel(application: Application) : AndroidViewModel(application) 
     ) { flights, filter ->
         var result = flights
 
-        // Filtern
-        result = when (filter.filterType) {
-            FilterType.BY_TYPE -> {
-                val type = filter.selectedFlightType?.name ?: ""
-                result.filter { it.flightType == type }
-            }
-            FilterType.BY_GLIDER -> {
-                val glider = filter.selectedGlider ?: ""
-                result.filter { it.gliderName == glider }
-            }
-            FilterType.ALL -> result
+        if (filter.selectedFlightTypes.isNotEmpty()) {
+            val typeNames = filter.selectedFlightTypes.map { it.name }.toSet()
+            result = result.filter { it.flightType in typeNames }
         }
 
-        // Sortieren
+        if (filter.selectedGliders.isNotEmpty()) {
+            result = result.filter { it.gliderName in filter.selectedGliders }
+        }
+
         result = when (filter.sortOrder) {
             SortOrder.DATE_DESC -> result.sortedByDescending { it.date }
             SortOrder.DATE_ASC -> result.sortedBy { it.date }
@@ -75,56 +70,29 @@ class FlightViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun insertFlight(flight: FlightEntity) {
-        viewModelScope.launch {
-            repository.insertFlight(flight)
-        }
+        viewModelScope.launch { repository.insertFlight(flight) }
     }
 
     fun updateFlight(flight: FlightEntity) {
-        viewModelScope.launch {
-            repository.updateFlight(flight)
-        }
+        viewModelScope.launch { repository.updateFlight(flight) }
     }
 
     fun deleteFlight(flight: FlightEntity) {
-        viewModelScope.launch {
-            repository.deleteFlight(flight)
-        }
+        viewModelScope.launch { repository.deleteFlight(flight) }
     }
 
     suspend fun getFlightById(id: Int): FlightEntity? =
         repository.getFlightById(id)
 
     fun deleteGlider(glider: GliderEntity) {
-        viewModelScope.launch {
-            repository.deleteGlider(glider)
-        }
-    }
-
-    // Export als JSON
-    fun exportToJson(context: Context): File? {
-        return try {
-            val gson = Gson()
-            var exportedFlights: List<FlightEntity> = emptyList()
-            viewModelScope.launch {
-                exportedFlights = repository.getAllFlightsOnce()
-            }
-            // Synchrone Variante über Flow collect
-            val dir = context.getExternalFilesDir(null) ?: context.filesDir
-            val file = File(dir, "flugbuch_export_${System.currentTimeMillis()}.json")
-            // Wird asynchron befüllt – daher separate exportFlightsToFile-Methode
-            file
-        } catch (e: Exception) {
-            null
-        }
+        viewModelScope.launch { repository.deleteGlider(glider) }
     }
 
     fun exportFlightsToJson(context: Context, onResult: (File?) -> Unit) {
         viewModelScope.launch {
             try {
                 val flights = repository.getAllFlightsOnce()
-                val gson = Gson()
-                val json = gson.toJson(flights)
+                val json = Gson().toJson(flights)
                 val dir = context.getExternalFilesDir(null) ?: context.filesDir
                 val file = File(dir, "flugbuch_export_${System.currentTimeMillis()}.json")
                 file.writeText(json)
@@ -165,9 +133,8 @@ class FlightViewModel(application: Application) : AndroidViewModel(application) 
     fun importFromJson(jsonContent: String, onResult: (Int) -> Unit) {
         viewModelScope.launch {
             try {
-                val gson = Gson()
                 val type = object : TypeToken<List<FlightEntity>>() {}.type
-                val flights: List<FlightEntity> = gson.fromJson(jsonContent, type)
+                val flights: List<FlightEntity> = Gson().fromJson(jsonContent, type)
                 repository.importFlights(flights)
                 onResult(flights.size)
                 _message.value = "${flights.size} Flüge importiert"
