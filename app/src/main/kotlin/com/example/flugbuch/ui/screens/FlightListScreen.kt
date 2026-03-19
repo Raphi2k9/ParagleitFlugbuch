@@ -24,6 +24,7 @@ import com.example.flugbuch.ui.components.FlightCard
 import com.example.flugbuch.viewmodel.FilterState
 import com.example.flugbuch.viewmodel.FlightViewModel
 import com.example.flugbuch.viewmodel.SortOrder
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -160,14 +161,22 @@ fun FlightListScreen(
 
                     LaunchedEffect(swipeState.currentValue) {
                         if (swipeState.currentValue == SwipeToDismissBoxValue.EndToStart) {
-                            val result = snackbarHostState.showSnackbar(
-                                message = "Flug gelöscht",
-                                actionLabel = "Rückgängig",
-                                duration = SnackbarDuration.Short
-                            )
-                            if (result == SnackbarResult.ActionPerformed) {
-                                swipeState.reset()
-                            } else {
+                            var undone = false
+                            val snackbarJob = launch {
+                                val result = snackbarHostState.showSnackbar(
+                                    message = "Flug löschen...",
+                                    actionLabel = "Rückgängig",
+                                    duration = SnackbarDuration.Indefinite
+                                )
+                                if (result == SnackbarResult.ActionPerformed) {
+                                    undone = true
+                                    swipeState.reset()
+                                }
+                            }
+                            delay(2000)
+                            snackbarHostState.currentSnackbarData?.dismiss()
+                            snackbarJob.join()
+                            if (!undone) {
                                 viewModel.deleteFlight(flight)
                             }
                         }
