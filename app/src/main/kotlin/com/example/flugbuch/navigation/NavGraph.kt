@@ -10,6 +10,7 @@ import com.example.flugbuch.ui.screens.AddEditFlightScreen
 import com.example.flugbuch.ui.screens.ExportImportScreen
 import com.example.flugbuch.ui.screens.FlightListScreen
 import com.example.flugbuch.ui.screens.StatisticsScreen
+import com.example.flugbuch.ui.theme.ThemePreference
 import com.example.flugbuch.viewmodel.FlightViewModel
 import com.example.flugbuch.viewmodel.StatisticsViewModel
 
@@ -17,7 +18,9 @@ import com.example.flugbuch.viewmodel.StatisticsViewModel
 fun NavGraph(
     navController: NavHostController,
     flightViewModel: FlightViewModel,
-    statisticsViewModel: StatisticsViewModel
+    statisticsViewModel: StatisticsViewModel,
+    themePreference: ThemePreference,
+    onThemeChange: (ThemePreference) -> Unit
 ) {
     NavHost(
         navController = navController,
@@ -31,7 +34,9 @@ fun NavGraph(
                     navController.navigate(Routes.EditFlight.createRoute(flightId))
                 },
                 onNavigateToStats = { navController.navigate(Routes.Statistics.route) },
-                onNavigateToExport = { navController.navigate(Routes.ExportImport.route) }
+                onNavigateToExport = { navController.navigate(Routes.ExportImport.route) },
+                themePreference = themePreference,
+                onThemeChange = onThemeChange
             )
         }
 

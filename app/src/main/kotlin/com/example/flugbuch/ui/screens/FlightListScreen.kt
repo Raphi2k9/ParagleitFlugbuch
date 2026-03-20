@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.flugbuch.data.entities.FlightType
 import com.example.flugbuch.ui.components.FlightCard
+import com.example.flugbuch.ui.theme.ThemePreference
 import com.example.flugbuch.viewmodel.FilterState
 import com.example.flugbuch.viewmodel.FlightViewModel
 import com.example.flugbuch.viewmodel.SortOrder
@@ -34,7 +35,9 @@ fun FlightListScreen(
     onAddFlight: () -> Unit,
     onEditFlight: (Int) -> Unit,
     onNavigateToStats: () -> Unit,
-    onNavigateToExport: () -> Unit
+    onNavigateToExport: () -> Unit,
+    themePreference: ThemePreference,
+    onThemeChange: (ThemePreference) -> Unit
 ) {
     val flights by viewModel.filteredFlights.collectAsStateWithLifecycle()
     val filterState by viewModel.filterState.collectAsStateWithLifecycle()
@@ -99,6 +102,37 @@ fun FlightListScreen(
                             text = { Text("Export / Import") },
                             leadingIcon = { Icon(Icons.Default.ImportExport, null) },
                             onClick = { showMenu = false; onNavigateToExport() }
+                        )
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text("System-Theme") },
+                            leadingIcon = { Icon(Icons.Default.BrightnessAuto, null) },
+                            trailingIcon = {
+                                if (themePreference == ThemePreference.SYSTEM) {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                }
+                            },
+                            onClick = { onThemeChange(ThemePreference.SYSTEM); showMenu = false }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Hell") },
+                            leadingIcon = { Icon(Icons.Default.LightMode, null) },
+                            trailingIcon = {
+                                if (themePreference == ThemePreference.LIGHT) {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                }
+                            },
+                            onClick = { onThemeChange(ThemePreference.LIGHT); showMenu = false }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Dunkel") },
+                            leadingIcon = { Icon(Icons.Default.DarkMode, null) },
+                            trailingIcon = {
+                                if (themePreference == ThemePreference.DARK) {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                }
+                            },
+                            onClick = { onThemeChange(ThemePreference.DARK); showMenu = false }
                         )
                     }
                 }
