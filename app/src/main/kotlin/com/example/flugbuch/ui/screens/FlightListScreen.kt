@@ -36,6 +36,7 @@ fun FlightListScreen(
     onEditFlight: (Int) -> Unit,
     onNavigateToStats: () -> Unit,
     onNavigateToExport: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     themePreference: ThemePreference,
     onThemeChange: (ThemePreference) -> Unit
 ) {
@@ -103,36 +104,10 @@ fun FlightListScreen(
                             leadingIcon = { Icon(Icons.Default.ImportExport, null) },
                             onClick = { showMenu = false; onNavigateToExport() }
                         )
-                        HorizontalDivider()
                         DropdownMenuItem(
-                            text = { Text("System-Theme") },
-                            leadingIcon = { Icon(Icons.Default.BrightnessAuto, null) },
-                            trailingIcon = {
-                                if (themePreference == ThemePreference.SYSTEM) {
-                                    Icon(Icons.Default.Check, contentDescription = null)
-                                }
-                            },
-                            onClick = { onThemeChange(ThemePreference.SYSTEM); showMenu = false }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Hell") },
-                            leadingIcon = { Icon(Icons.Default.LightMode, null) },
-                            trailingIcon = {
-                                if (themePreference == ThemePreference.LIGHT) {
-                                    Icon(Icons.Default.Check, contentDescription = null)
-                                }
-                            },
-                            onClick = { onThemeChange(ThemePreference.LIGHT); showMenu = false }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Dunkel") },
-                            leadingIcon = { Icon(Icons.Default.DarkMode, null) },
-                            trailingIcon = {
-                                if (themePreference == ThemePreference.DARK) {
-                                    Icon(Icons.Default.Check, contentDescription = null)
-                                }
-                            },
-                            onClick = { onThemeChange(ThemePreference.DARK); showMenu = false }
+                            text = { Text("Einstellungen") },
+                            leadingIcon = { Icon(Icons.Default.Settings, null) },
+                            onClick = { showMenu = false; onNavigateToSettings() }
                         )
                     }
                 }

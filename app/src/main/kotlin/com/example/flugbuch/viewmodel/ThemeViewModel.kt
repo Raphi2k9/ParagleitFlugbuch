@@ -19,8 +19,24 @@ class ThemeViewModel(application: Application) : AndroidViewModel(application) {
     )
     val themePreference: StateFlow<ThemePreference> = _themePreference.asStateFlow()
 
+    private val _pilotName = MutableStateFlow(prefs.getString("pilot_name", "") ?: "")
+    val pilotName: StateFlow<String> = _pilotName.asStateFlow()
+
+    private val _licenseNumber = MutableStateFlow(prefs.getString("license_number", "") ?: "")
+    val licenseNumber: StateFlow<String> = _licenseNumber.asStateFlow()
+
     fun setTheme(theme: ThemePreference) {
         _themePreference.value = theme
         prefs.edit().putString("theme", theme.name).apply()
+    }
+
+    fun setPilotName(name: String) {
+        _pilotName.value = name
+        prefs.edit().putString("pilot_name", name).apply()
+    }
+
+    fun setLicenseNumber(number: String) {
+        _licenseNumber.value = number
+        prefs.edit().putString("license_number", number).apply()
     }
 }

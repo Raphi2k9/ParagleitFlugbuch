@@ -29,6 +29,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeViewModel: ThemeViewModel = viewModel()
             val themePreference by themeViewModel.themePreference.collectAsStateWithLifecycle()
+            val pilotName by themeViewModel.pilotName.collectAsStateWithLifecycle()
+            val licenseNumber by themeViewModel.licenseNumber.collectAsStateWithLifecycle()
             val systemDark = isSystemInDarkTheme()
             val isDark = when (themePreference) {
                 ThemePreference.DARK -> true
@@ -38,7 +40,11 @@ class MainActivity : ComponentActivity() {
             FlugbuchTheme(darkTheme = isDark, dynamicColor = false) {
                 FlugbuchApp(
                     themePreference = themePreference,
-                    onThemeChange = themeViewModel::setTheme
+                    onThemeChange = themeViewModel::setTheme,
+                    pilotName = pilotName,
+                    onPilotNameChange = themeViewModel::setPilotName,
+                    licenseNumber = licenseNumber,
+                    onLicenseNumberChange = themeViewModel::setLicenseNumber
                 )
             }
         }
@@ -48,7 +54,11 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun FlugbuchApp(
     themePreference: ThemePreference,
-    onThemeChange: (ThemePreference) -> Unit
+    onThemeChange: (ThemePreference) -> Unit,
+    pilotName: String,
+    onPilotNameChange: (String) -> Unit,
+    licenseNumber: String,
+    onLicenseNumberChange: (String) -> Unit
 ) {
     val navController = rememberNavController()
     val flightViewModel: FlightViewModel = viewModel()
@@ -63,7 +73,11 @@ fun FlugbuchApp(
             flightViewModel = flightViewModel,
             statisticsViewModel = statisticsViewModel,
             themePreference = themePreference,
-            onThemeChange = onThemeChange
+            onThemeChange = onThemeChange,
+            pilotName = pilotName,
+            onPilotNameChange = onPilotNameChange,
+            licenseNumber = licenseNumber,
+            onLicenseNumberChange = onLicenseNumberChange
         )
     }
 }

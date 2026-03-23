@@ -8,4 +8,5 @@ sealed class Routes(val route: String) {
     }
     data object Statistics : Routes("statistics")
     data object ExportImport : Routes("export_import")
+    data object Settings : Routes("settings")
 }

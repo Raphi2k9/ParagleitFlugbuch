@@ -9,6 +9,7 @@ import androidx.navigation.navArgument
 import com.example.flugbuch.ui.screens.AddEditFlightScreen
 import com.example.flugbuch.ui.screens.ExportImportScreen
 import com.example.flugbuch.ui.screens.FlightListScreen
+import com.example.flugbuch.ui.screens.SettingsScreen
 import com.example.flugbuch.ui.screens.StatisticsScreen
 import com.example.flugbuch.ui.theme.ThemePreference
 import com.example.flugbuch.viewmodel.FlightViewModel
@@ -20,7 +21,11 @@ fun NavGraph(
     flightViewModel: FlightViewModel,
     statisticsViewModel: StatisticsViewModel,
     themePreference: ThemePreference,
-    onThemeChange: (ThemePreference) -> Unit
+    onThemeChange: (ThemePreference) -> Unit,
+    pilotName: String,
+    onPilotNameChange: (String) -> Unit,
+    licenseNumber: String,
+    onLicenseNumberChange: (String) -> Unit
 ) {
     NavHost(
         navController = navController,
@@ -35,6 +40,7 @@ fun NavGraph(
                 },
                 onNavigateToStats = { navController.navigate(Routes.Statistics.route) },
                 onNavigateToExport = { navController.navigate(Routes.ExportImport.route) },
+                onNavigateToSettings = { navController.navigate(Routes.Settings.route) },
                 themePreference = themePreference,
                 onThemeChange = onThemeChange
             )
@@ -70,6 +76,18 @@ fun NavGraph(
         composable(Routes.ExportImport.route) {
             ExportImportScreen(
                 viewModel = flightViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.Settings.route) {
+            SettingsScreen(
+                themePreference = themePreference,
+                onThemeChange = onThemeChange,
+                pilotName = pilotName,
+                onPilotNameChange = onPilotNameChange,
+                licenseNumber = licenseNumber,
+                onLicenseNumberChange = onLicenseNumberChange,
                 onNavigateBack = { navController.popBackStack() }
             )
         }
