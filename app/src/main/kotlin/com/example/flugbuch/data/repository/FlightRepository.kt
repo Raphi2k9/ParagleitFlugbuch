@@ -69,6 +69,9 @@ class FlightRepository(
     suspend fun deleteGlider(glider: GliderEntity) =
         gliderDao.deleteGlider(glider)
 
+    suspend fun deleteAllFlights() =
+        flightDao.deleteAllFlights()
+
     // Bulk import
     suspend fun importFlights(flights: List<FlightEntity>) {
         flights.forEach { insertFlight(it.copy(id = 0)) }

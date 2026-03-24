@@ -31,6 +31,7 @@ fun ExportImportScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var isLoading by remember { mutableStateOf(false) }
     var exportedFilePath by remember { mutableStateOf<String?>(null) }
+    var showDeleteAllDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(message) {
         message?.let {
@@ -47,6 +48,19 @@ fun ExportImportScreen(
             isLoading = true
             val content = context.contentResolver.openInputStream(it)?.bufferedReader()?.readText() ?: ""
             viewModel.importFromJson(content) { count ->
+                isLoading = false
+            }
+        }
+    }
+
+    // Import CSV Launcher
+    val importCsvLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            isLoading = true
+            val content = context.contentResolver.openInputStream(it)?.bufferedReader()?.readText() ?: ""
+            viewModel.importFromCsv(content) { count ->
                 isLoading = false
             }
         }
@@ -145,7 +159,7 @@ fun ExportImportScreen(
             // Import Sektion
             InfoCard(
                 title = "Daten importieren",
-                description = "Importiere Flüge aus einer zuvor exportierten JSON-Datei. Bestehende Flüge bleiben erhalten.",
+                description = "Importiere Flüge aus einer JSON- oder CSV-Datei. Bestehende Flüge bleiben erhalten.",
                 icon = Icons.Default.Download
             )
 
@@ -157,6 +171,95 @@ fun ExportImportScreen(
                 buttonEnabled = !isLoading
             ) {
                 importJsonLauncher.launch("application/json")
+            }
+
+            ExportImportActionCard(
+                title = "Aus CSV importieren",
+                description = "Importiere Flüge aus einer CSV-Datei. Unterstützt eigene Spaltennamen (Deutsch & Englisch). Pflichtfelder: Datum, Schirm, Dauer.",
+                icon = Icons.Default.TableChart,
+                buttonText = "CSV-Datei auswählen",
+                buttonEnabled = !isLoading
+            ) {
+                importCsvLauncher.launch("text/*")
+            }
+
+            HorizontalDivider()
+
+            // Gefahrenzone
+            InfoCard(
+                title = "Gefahrenzone",
+                description = "Aktionen hier können nicht rückgängig gemacht werden.",
+                icon = Icons.Default.Warning
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.DeleteForever,
+                            null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Flugbuch leeren",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Löscht alle Flüge unwiderruflich. Schirme bleiben erhalten.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = { showDeleteAllDialog = true },
+                        enabled = !isLoading,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        ),
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("Alles löschen")
+                    }
+                }
+            }
+
+            if (showDeleteAllDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDeleteAllDialog = false },
+                    icon = { Icon(Icons.Default.DeleteForever, null, tint = MaterialTheme.colorScheme.error) },
+                    title = { Text("Flugbuch leeren?") },
+                    text = { Text("Alle Flüge werden unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.") },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                showDeleteAllDialog = false
+                                viewModel.deleteAllFlights()
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Text("Ja, alles löschen")
+                        }
+                    },
+                    dismissButton = {
+                        OutlinedButton(onClick = { showDeleteAllDialog = false }) {
+                            Text("Abbrechen")
+                        }
+                    }
+                )
             }
 
             if (isLoading) {

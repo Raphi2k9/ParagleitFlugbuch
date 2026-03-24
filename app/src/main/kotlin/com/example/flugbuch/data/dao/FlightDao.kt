@@ -45,4 +45,7 @@ interface FlightDao {
 
     @Query("DELETE FROM flights WHERE id = :id")
     suspend fun deleteFlightById(id: Int)
+
+    @Query("DELETE FROM flights")
+    suspend fun deleteAllFlights()
 }
