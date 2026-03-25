@@ -66,6 +66,19 @@ fun ExportImportScreen(
         }
     }
 
+    // Import IGC Launcher
+    val importIgcLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            isLoading = true
+            val content = context.contentResolver.openInputStream(it)?.bufferedReader()?.readText() ?: ""
+            viewModel.importFromIgc(content) { _ ->
+                isLoading = false
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -181,6 +194,16 @@ fun ExportImportScreen(
                 buttonEnabled = !isLoading
             ) {
                 importCsvLauncher.launch("text/*")
+            }
+
+            ExportImportActionCard(
+                title = "Aus IGC importieren",
+                description = "Importiere einen Flug aus einer IGC-Tracklog-Datei. Datum, Schirm, Dauer, Höhe und Distanz werden automatisch ausgelesen.",
+                icon = Icons.Default.FlightTakeoff,
+                buttonText = "IGC-Datei auswählen",
+                buttonEnabled = !isLoading
+            ) {
+                importIgcLauncher.launch("*/*")
             }
 
             HorizontalDivider()

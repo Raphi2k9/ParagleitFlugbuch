@@ -9,12 +9,14 @@ import com.example.flugbuch.data.entities.FlightEntity
 import com.example.flugbuch.data.entities.FlightType
 import com.example.flugbuch.data.entities.GliderEntity
 import com.example.flugbuch.data.repository.FlightRepository
+import com.example.flugbuch.igc.parseIgc
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
+import java.time.ZoneOffset
 import java.util.Locale
 
 enum class SortOrder { DATE_DESC, DATE_ASC, TYPE, GLIDER }
@@ -281,6 +283,30 @@ class FlightViewModel(application: Application) : AndroidViewModel(application) 
         }
         result.add(current.toString())
         return result
+    }
+
+    fun importFromIgc(igcContent: String, onResult: (Int) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val igc = parseIgc(igcContent)
+                val flight = FlightEntity(
+                    id = 0,
+                    date = igc.date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+                    gliderName = igc.glider ?: "Unbekannt",
+                    durationMinutes = (igc.durationSeconds / 60).toInt(),
+                    flightType = FlightType.THERMAL.name,
+                    maxAltitude = igc.maxAltitudeMeters,
+                    distance = igc.trackDistanceKm,
+                    notes = igc.pilot?.let { "Pilot: $it" } ?: ""
+                )
+                repository.importFlights(listOf(flight))
+                onResult(1)
+                _message.value = "IGC-Flug importiert (${igc.date})"
+            } catch (e: Exception) {
+                onResult(0)
+                _message.value = "IGC-Import fehlgeschlagen: ${e.message}"
+            }
+        }
     }
 
     fun clearMessage() {
