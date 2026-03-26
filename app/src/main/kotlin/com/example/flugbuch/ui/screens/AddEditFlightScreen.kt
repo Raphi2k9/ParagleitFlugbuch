@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.flugbuch.data.entities.FlightEntity
 import com.example.flugbuch.data.entities.FlightType
+import com.example.flugbuch.data.entities.TrainingExercise
 import com.example.flugbuch.viewmodel.FlightViewModel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -40,6 +41,8 @@ fun AddEditFlightScreen(
     var durationHours by remember { mutableStateOf("0") }
     var durationMinutes by remember { mutableStateOf("0") }
     var flightType by remember { mutableStateOf(FlightType.THERMAL) }
+    var trainingExercises by remember { mutableStateOf(emptySet<TrainingExercise>()) }
+    var pruefungBestanden by remember { mutableStateOf<Boolean?>(null) }
     var startLocation by remember { mutableStateOf("") }
     var landingLocation by remember { mutableStateOf("") }
     var maxAltitude by remember { mutableStateOf("") }
@@ -58,6 +61,8 @@ fun AddEditFlightScreen(
                 durationHours = (flight.durationMinutes / 60).toString()
                 durationMinutes = (flight.durationMinutes % 60).toString()
                 flightType = FlightType.entries.find { it.name == flight.flightType } ?: FlightType.THERMAL
+                trainingExercises = TrainingExercise.fromStorageString(flight.trainingExercises)
+                pruefungBestanden = flight.pruefungBestanden
                 startLocation = flight.startLocation
                 landingLocation = flight.landingLocation
                 maxAltitude = flight.maxAltitude?.toString() ?: ""
@@ -149,6 +154,10 @@ fun AddEditFlightScreen(
             gliderName = gliderName.trim(),
             durationMinutes = totalMinutes,
             flightType = flightType.name,
+            trainingExercises = if (flightType == FlightType.SCHULUNGSFLUG)
+                TrainingExercise.toStorageString(trainingExercises).ifBlank { null }
+            else null,
+            pruefungBestanden = if (flightType == FlightType.PRUEFUNGSFLUG) pruefungBestanden else null,
             startLocation = startLocation.trim(),
             landingLocation = landingLocation.trim(),
             maxAltitude = maxAltitude.toIntOrNull(),
@@ -375,6 +384,75 @@ fun AddEditFlightScreen(
                             }
                         )
                     }
+                }
+            }
+
+            // ── Schulungsübungen (nur bei Flugart Schulungsflug) ─────────────
+            if (flightType == FlightType.SCHULUNGSFLUG) {
+                Spacer(modifier = Modifier.height(4.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(4.dp))
+                SectionHeader("Schulungsübungen")
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        TrainingExercise.entries.forEach { exercise ->
+                            val checked = exercise in trainingExercises
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = checked,
+                                    onCheckedChange = { isChecked ->
+                                        trainingExercises = if (isChecked)
+                                            trainingExercises + exercise
+                                        else
+                                            trainingExercises - exercise
+                                    }
+                                )
+                                Text(
+                                    text = exercise.displayName,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Prüfungsergebnis (nur bei Flugart Prüfungsflug) ──────────────
+            if (flightType == FlightType.PRUEFUNGSFLUG) {
+                Spacer(modifier = Modifier.height(4.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(4.dp))
+                SectionHeader("Prüfungsergebnis")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    FilterChip(
+                        selected = pruefungBestanden == true,
+                        onClick = { pruefungBestanden = if (pruefungBestanden == true) null else true },
+                        label = { Text("Bestanden") },
+                        leadingIcon = if (pruefungBestanden == true) {
+                            { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        } else null,
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChip(
+                        selected = pruefungBestanden == false,
+                        onClick = { pruefungBestanden = if (pruefungBestanden == false) null else false },
+                        label = { Text("Nicht bestanden") },
+                        leadingIcon = if (pruefungBestanden == false) {
+                            { Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        } else null,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
 

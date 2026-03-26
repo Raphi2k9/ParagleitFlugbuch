@@ -22,5 +22,7 @@ data class FlightEntity(
     val windConditions: String = "",
     val cloudCover: String = "",
     val temperature: Int? = null,       // Celsius
-    val notes: String = ""
+    val notes: String = "",
+    val trainingExercises: String? = null,  // Komma-getrennte TrainingExercise-Namen (nur für SCHULUNGSFLUG)
+    val pruefungBestanden: Boolean? = null  // Prüfungsergebnis (nur für PRUEFUNGSFLUG)
 )

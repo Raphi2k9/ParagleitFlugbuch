@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.flugbuch.data.entities.FlightEntity
 import com.example.flugbuch.data.entities.FlightType
+import com.example.flugbuch.data.entities.TrainingExercise
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -153,6 +154,53 @@ fun FlightCard(
                 }
             }
 
+            if (flightType == FlightType.PRUEFUNGSFLUG && flight.pruefungBestanden != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        if (flight.pruefungBestanden) Icons.Default.CheckCircle else Icons.Default.Cancel,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = if (flight.pruefungBestanden)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (flight.pruefungBestanden) "Bestanden" else "Nicht bestanden",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (flight.pruefungBestanden)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+
+            if (flightType == FlightType.SCHULUNGSFLUG && !flight.trainingExercises.isNullOrBlank()) {
+                val exercises = TrainingExercise.fromStorageString(flight.trainingExercises)
+                if (exercises.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${exercises.size} Übungen: ${exercises.take(3).joinToString(", ") { it.displayName }}" +
+                                    if (exercises.size > 3) " …" else "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2
+                        )
+                    }
+                }
+            }
+
             if (flight.notes.isNotBlank()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -174,6 +222,8 @@ fun FlightTypeBadge(flightType: FlightType?) {
         FlightType.SIV -> MaterialTheme.colorScheme.error
         FlightType.CROSS_COUNTRY -> MaterialTheme.colorScheme.secondary
         FlightType.HIKE_AND_FLY -> MaterialTheme.colorScheme.secondary
+        FlightType.SCHULUNGSFLUG -> MaterialTheme.colorScheme.tertiary
+        FlightType.PRUEFUNGSFLUG -> MaterialTheme.colorScheme.error
         null -> MaterialTheme.colorScheme.outline
     }
 
