@@ -2,6 +2,7 @@ package com.example.flugbuch.viewmodel
 
 import android.app.Application
 import android.content.Context
+import android.location.Geocoder
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.flugbuch.data.database.FlightDatabase
@@ -9,11 +10,14 @@ import com.example.flugbuch.data.entities.FlightEntity
 import com.example.flugbuch.data.entities.FlightType
 import com.example.flugbuch.data.entities.GliderEntity
 import com.example.flugbuch.data.repository.FlightRepository
+import com.example.flugbuch.igc.Coords
 import com.example.flugbuch.igc.parseIgc
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.time.ZoneOffset
@@ -289,6 +293,8 @@ class FlightViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             try {
                 val igc = parseIgc(igcContent)
+                val startLocation = reverseGeocode(igc.launchCoords)
+                val landingLocation = reverseGeocode(igc.landingCoords)
                 val flight = FlightEntity(
                     id = 0,
                     date = igc.date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
@@ -297,6 +303,8 @@ class FlightViewModel(application: Application) : AndroidViewModel(application) 
                     flightType = FlightType.THERMAL.name,
                     maxAltitude = igc.maxAltitudeMeters,
                     distance = igc.trackDistanceKm,
+                    startLocation = startLocation,
+                    landingLocation = landingLocation,
                     notes = igc.pilot?.let { "Pilot: $it" } ?: ""
                 )
                 repository.importFlights(listOf(flight))
@@ -307,6 +315,26 @@ class FlightViewModel(application: Application) : AndroidViewModel(application) 
                 _message.value = "IGC-Import fehlgeschlagen: ${e.message}"
             }
         }
+    }
+
+    @Suppress("DEPRECATION")
+    private suspend fun reverseGeocode(coords: Coords): String = withContext(Dispatchers.IO) {
+        runCatching {
+            val geocoder = Geocoder(getApplication(), Locale.getDefault())
+            geocoder.getFromLocation(coords.lat, coords.lng, 1)
+                ?.firstOrNull()
+                ?.let { addr ->
+                    listOfNotNull(addr.locality ?: addr.subAdminArea, addr.adminArea)
+                        .joinToString(", ")
+                        .ifBlank { null }
+                } ?: coordsToString(coords)
+        }.getOrElse { coordsToString(coords) }
+    }
+
+    private fun coordsToString(coords: Coords): String {
+        val latDir = if (coords.lat >= 0) "N" else "S"
+        val lngDir = if (coords.lng >= 0) "E" else "W"
+        return "%.4f°%s, %.4f°%s".format(Math.abs(coords.lat), latDir, Math.abs(coords.lng), lngDir)
     }
 
     fun clearMessage() {
