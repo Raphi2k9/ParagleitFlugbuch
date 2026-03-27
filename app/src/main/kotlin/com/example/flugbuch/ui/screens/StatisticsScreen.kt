@@ -20,10 +20,12 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.flugbuch.R
 import com.example.flugbuch.viewmodel.AltitudeStats
 import com.example.flugbuch.viewmodel.DistanceStats
 import com.example.flugbuch.viewmodel.FlightTypeStats
@@ -41,10 +43,10 @@ fun StatisticsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Statistiken", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.stats_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -74,21 +76,21 @@ fun StatisticsScreen(
 
             // Flüge nach Flugart
             if (stats.typeStats.isNotEmpty()) {
-                StatCard(title = "Flüge nach Flugart") {
+                StatCard(title = stringResource(R.string.stats_by_type)) {
                     FlightTypeChart(stats.typeStats)
                 }
             }
 
             // Flüge nach Schirm
             if (stats.gliderStats.isNotEmpty()) {
-                StatCard(title = "Flüge nach Schirm") {
+                StatCard(title = stringResource(R.string.stats_by_glider)) {
                     GliderStatsTable(stats.gliderStats)
                 }
             }
 
             // Monatsübersicht
             if (stats.flightsByMonth.isNotEmpty()) {
-                StatCard(title = "Flüge pro Monat") {
+                StatCard(title = stringResource(R.string.stats_by_month)) {
                     MonthlyBarChart(stats.flightsByMonth)
                 }
             }
@@ -123,7 +125,7 @@ private fun EmptyStats() {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "Noch keine Daten für Statistiken",
+                stringResource(R.string.stats_empty),
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
@@ -144,14 +146,14 @@ private fun OverviewCards(totalFlights: Int, totalMinutes: Int) {
         StatSummaryCard(
             modifier = Modifier.weight(1f),
             value = totalFlights.toString(),
-            label = "Flüge gesamt",
+            label = stringResource(R.string.stats_total_flights),
             icon = Icons.Default.FlightTakeoff,
             containerColor = MaterialTheme.colorScheme.primaryContainer
         )
         StatSummaryCard(
             modifier = Modifier.weight(1f),
             value = if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m",
-            label = "Flugstunden",
+            label = stringResource(R.string.stats_total_hours),
             icon = Icons.Default.Schedule,
             containerColor = MaterialTheme.colorScheme.secondaryContainer
         )
@@ -235,7 +237,7 @@ private fun FlightTypeChart(typeStats: List<FlightTypeStats>) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    stat.flightType.displayName,
+                    stringResource(stat.flightType.labelRes),
                     modifier = Modifier.width(120.dp),
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -270,9 +272,9 @@ private fun FlightTypeChart(typeStats: List<FlightTypeStats>) {
 private fun GliderStatsTable(gliderStats: List<GliderStats>) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(modifier = Modifier.fillMaxWidth()) {
-            Text("Schirm", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-            Text("Flüge", modifier = Modifier.width(50.dp), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
-            Text("Stunden", modifier = Modifier.width(70.dp), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
+            Text(stringResource(R.string.stats_glider_col), modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.stats_flights_col), modifier = Modifier.width(50.dp), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
+            Text(stringResource(R.string.stats_hours_col), modifier = Modifier.width(70.dp), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
         }
         HorizontalDivider()
 
@@ -341,8 +343,9 @@ private fun MonthlyBarChart(flightsByMonth: Map<String, Int>) {
         }
     }
 
+    val lastMonthsLabel = stringResource(R.string.stats_last_months, entries.size)
     Text(
-        "Letzte ${entries.size} Monate",
+        lastMonthsLabel,
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
         modifier = Modifier.fillMaxWidth(),
@@ -354,8 +357,7 @@ private fun MonthlyBarChart(flightsByMonth: Map<String, Int>) {
 
 @Composable
 private fun DistanceStatsSection(dist: DistanceStats) {
-    // Übersicht-Karten
-    StatCard(title = "Distanz") {
+    StatCard(title = stringResource(R.string.stats_distance_section)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -363,26 +365,26 @@ private fun DistanceStatsSection(dist: DistanceStats) {
             MiniStatCard(
                 modifier = Modifier.weight(1f),
                 value = "%.1f km".format(dist.totalKm),
-                label = "Gesamt",
+                label = stringResource(R.string.stats_dist_total),
                 containerColor = MaterialTheme.colorScheme.primaryContainer
             )
             MiniStatCard(
                 modifier = Modifier.weight(1f),
                 value = "%.1f km".format(dist.avgKm),
-                label = "Ø pro Flug",
+                label = stringResource(R.string.stats_dist_avg),
                 containerColor = MaterialTheme.colorScheme.secondaryContainer
             )
             MiniStatCard(
                 modifier = Modifier.weight(1f),
                 value = "%.1f km".format(dist.maxKm),
-                label = "Längstes",
+                label = stringResource(R.string.stats_dist_max),
                 containerColor = MaterialTheme.colorScheme.tertiaryContainer
             )
         }
 
         if (dist.byGlider.isNotEmpty()) {
             Spacer(Modifier.height(12.dp))
-            Text("Distanz pro Schirm", style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.stats_dist_by_glider), style = MaterialTheme.typography.labelLarge)
             Spacer(Modifier.height(8.dp))
             val maxDist = dist.byGlider.maxOf { it.second }.coerceAtLeast(0.001)
             dist.byGlider.take(5).forEach { (name, km) ->
@@ -411,7 +413,7 @@ private fun DistanceStatsSection(dist: DistanceStats) {
 
         if (dist.byMonth.size >= 2) {
             Spacer(Modifier.height(12.dp))
-            Text("Distanz pro Monat", style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.stats_dist_by_month), style = MaterialTheme.typography.labelLarge)
             Spacer(Modifier.height(8.dp))
             SimpleLineChart(
                 data = dist.byMonth.entries.map { it.key to it.value.toFloat() },
@@ -427,7 +429,7 @@ private fun DistanceStatsSection(dist: DistanceStats) {
 
 @Composable
 private fun AltitudeStatsSection(alt: AltitudeStats) {
-    StatCard(title = "Höhe") {
+    StatCard(title = stringResource(R.string.stats_altitude_section)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -435,20 +437,20 @@ private fun AltitudeStatsSection(alt: AltitudeStats) {
             MiniStatCard(
                 modifier = Modifier.weight(1f),
                 value = "${alt.globalMaxAlt} m",
-                label = "Höchste",
+                label = stringResource(R.string.stats_alt_highest),
                 containerColor = MaterialTheme.colorScheme.primaryContainer
             )
             MiniStatCard(
                 modifier = Modifier.weight(1f),
                 value = "%.0f m".format(alt.avgMaxAlt),
-                label = "Ø Max-Höhe",
+                label = stringResource(R.string.stats_alt_avg),
                 containerColor = MaterialTheme.colorScheme.secondaryContainer
             )
         }
 
         if (alt.maxByGlider.isNotEmpty()) {
             Spacer(Modifier.height(12.dp))
-            Text("Höchste Höhe pro Schirm", style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.stats_alt_by_glider), style = MaterialTheme.typography.labelLarge)
             Spacer(Modifier.height(8.dp))
             val maxAlt = alt.maxByGlider.maxOf { it.second }.coerceAtLeast(1)
             alt.maxByGlider.take(5).forEach { (name, altM) ->
@@ -477,7 +479,7 @@ private fun AltitudeStatsSection(alt: AltitudeStats) {
 
         if (alt.byMonth.size >= 2) {
             Spacer(Modifier.height(12.dp))
-            Text("Max. Höhe pro Monat", style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.stats_alt_by_month), style = MaterialTheme.typography.labelLarge)
             Spacer(Modifier.height(8.dp))
             SimpleLineChart(
                 data = alt.byMonth.entries.map { it.key to it.value.toFloat() },

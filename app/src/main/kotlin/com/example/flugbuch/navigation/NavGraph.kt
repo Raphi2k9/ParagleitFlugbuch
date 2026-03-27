@@ -25,7 +25,9 @@ fun NavGraph(
     pilotName: String,
     onPilotNameChange: (String) -> Unit,
     licenseNumber: String,
-    onLicenseNumberChange: (String) -> Unit
+    onLicenseNumberChange: (String) -> Unit,
+    language: String,
+    onLanguageChange: (String) -> Unit
 ) {
     NavHost(
         navController = navController,
@@ -88,6 +90,8 @@ fun NavGraph(
                 onPilotNameChange = onPilotNameChange,
                 licenseNumber = licenseNumber,
                 onLicenseNumberChange = onLicenseNumberChange,
+                language = language,
+                onLanguageChange = onLanguageChange,
                 onNavigateBack = { navController.popBackStack() }
             )
         }

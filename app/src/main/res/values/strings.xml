@@ -1,4 +1,195 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Paragleit Flugbuch</string>
+
+    <!-- Common -->
+    <string name="action_back">Zurück</string>
+    <string name="action_save">Speichern</string>
+    <string name="action_cancel">Abbrechen</string>
+    <string name="action_delete">Löschen</string>
+    <string name="action_ok">OK</string>
+    <string name="action_apply">Anwenden</string>
+    <string name="action_reset">Zurücksetzen</string>
+    <string name="action_select_all">Alle auswählen</string>
+    <string name="action_deselect_all">Alle abwählen</string>
+    <string name="label_unknown">Unbekannt</string>
+    <string name="label_passed">Bestanden</string>
+    <string name="label_failed">Nicht bestanden</string>
+    <string name="required_field">Pflichtfeld</string>
+    <string name="numbers_only">Bitte nur Zahlen eingeben</string>
+
+    <!-- FlightList -->
+    <string name="flight_list_subtitle">%d Flüge</string>
+    <string name="flight_list_empty_title">Noch keine Flüge erfasst</string>
+    <string name="flight_list_empty_hint">Tippe auf + um deinen ersten Flug\neinzutragen</string>
+    <string name="flight_list_new_flight">Neuer Flug</string>
+    <string name="flight_list_filter">Filter &amp; Sortierung</string>
+    <string name="flight_list_statistics">Statistiken</string>
+    <string name="flight_list_menu">Menü</string>
+    <string name="flight_list_export_import">Export / Import</string>
+    <string name="flight_list_settings">Einstellungen</string>
+    <string name="flight_delete_swipe">Flug löschen…</string>
+    <string name="action_undo">Rückgängig</string>
+    <string name="flight_delete_confirm">Flug löschen?</string>
+
+    <!-- Filter/Sort Sheet -->
+    <string name="filter_title">Filter &amp; Sortierung</string>
+    <string name="filter_sort">Sortierung</string>
+    <string name="filter_sort_date_desc">Datum ↓</string>
+    <string name="filter_sort_date_asc">Datum ↑</string>
+    <string name="filter_sort_type">Flugart</string>
+    <string name="filter_sort_glider">Schirm</string>
+    <string name="filter_by_type">Filter nach Flugart</string>
+    <string name="filter_by_glider">Filter nach Schirm</string>
+    <string name="filter_active_types">%d Flugarten</string>
+    <string name="filter_active_gliders">%d Schirme</string>
+    <string name="filter_remove">Filter entfernen</string>
+    <string name="filter_prefix">Filter: %s</string>
+
+    <!-- AddEdit Flight -->
+    <string name="add_flight_title">Neuer Flug</string>
+    <string name="edit_flight_title">Flug bearbeiten</string>
+    <string name="flight_required_fields">Pflichtfelder</string>
+    <string name="flight_date">Datum</string>
+    <string name="flight_date_future_error">Das Datum darf nicht in der Zukunft liegen</string>
+    <string name="flight_glider">Gleitschirm / Flügel *</string>
+    <string name="flight_glider_hint">z.B. Advance Alpha 7</string>
+    <string name="flight_hours">Stunden</string>
+    <string name="flight_minutes">Minuten</string>
+    <string name="flight_type_field">Flugart *</string>
+    <string name="flight_training_exercises">Schulungsübungen</string>
+    <string name="flight_exam_result">Prüfungsergebnis</string>
+    <string name="flight_optional_fields">Optionale Angaben</string>
+    <string name="flight_start_location">Startplatz</string>
+    <string name="flight_landing_location">Landeplatz</string>
+    <string name="flight_max_altitude">Max. Höhe</string>
+    <string name="flight_distance">Strecke</string>
+    <string name="flight_weather">Wetterbedingungen</string>
+    <string name="flight_wind">Wind</string>
+    <string name="flight_wind_hint">z.B. NW 15 km/h, böig</string>
+    <string name="flight_cloud_cover">Bewölkung</string>
+    <string name="flight_cloud_cover_hint">z.B. 3/8</string>
+    <string name="flight_temperature">Temperatur</string>
+    <string name="flight_notes_section">Notizen</string>
+    <string name="flight_notes">Persönliche Bemerkungen</string>
+    <string name="flight_save_new">Flug speichern</string>
+    <string name="flight_save_edit">Änderungen speichern</string>
+
+    <!-- FlightCard -->
+    <string name="flight_card_delete_title">Flug löschen?</string>
+    <string name="flight_card_delete_text">Flug vom %s wirklich löschen?</string>
+    <string name="flight_card_exercises">%1$d Übungen: %2$s</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_pilot_section">Pilotendaten</string>
+    <string name="settings_pilot_name">Name</string>
+    <string name="settings_pilot_name_hint">Wird in Exporten und Berichten verwendet</string>
+    <string name="settings_license">Lizenznummer</string>
+    <string name="settings_license_hint">Offizielle Pilotenlizenz-Nummer</string>
+    <string name="settings_design_section">Design</string>
+    <string name="settings_theme_system">System-Theme</string>
+    <string name="settings_theme_system_desc">Folgt der Geräteeinstellung</string>
+    <string name="settings_theme_light">Hell</string>
+    <string name="settings_theme_light_desc">Heller Hintergrund</string>
+    <string name="settings_theme_dark">Dunkel</string>
+    <string name="settings_theme_dark_desc">Dunkler Hintergrund</string>
+    <string name="settings_language_section">Sprache</string>
+    <string name="settings_language_german">Deutsch</string>
+    <string name="settings_language_german_desc">Benutzeroberfläche auf Deutsch</string>
+    <string name="settings_language_english">Englisch</string>
+    <string name="settings_language_english_desc">Interface in English</string>
+
+    <!-- Export/Import -->
+    <string name="export_import_title">Export / Import</string>
+    <string name="export_section_title">Daten exportieren</string>
+    <string name="export_section_desc">Exportiere alle Flüge als JSON oder CSV-Datei für Backups oder zur Weiterverarbeitung.</string>
+    <string name="export_json_title">Als JSON exportieren</string>
+    <string name="export_json_desc">Vollständiger Export aller Daten im JSON-Format. Ideal für Backups und Re-Import.</string>
+    <string name="export_json_button">JSON exportieren</string>
+    <string name="export_csv_title">Als CSV exportieren</string>
+    <string name="export_csv_desc">Export im CSV-Format für Tabellenkalkulationen (Excel, LibreOffice).</string>
+    <string name="export_csv_button">CSV exportieren</string>
+    <string name="import_section_title">Daten importieren</string>
+    <string name="import_section_desc">Importiere Flüge aus einer JSON- oder CSV-Datei. Bestehende Flüge bleiben erhalten.</string>
+    <string name="import_json_title">Aus JSON importieren</string>
+    <string name="import_json_desc">Wähle eine JSON-Datei aus, die zuvor mit dieser App exportiert wurde.</string>
+    <string name="import_json_button">JSON-Datei auswählen</string>
+    <string name="import_csv_title">Aus CSV importieren</string>
+    <string name="import_csv_desc">Importiere Flüge aus einer CSV-Datei. Unterstützt eigene Spaltennamen (Deutsch &amp; Englisch). Pflichtfelder: Datum, Schirm, Dauer.</string>
+    <string name="import_csv_button">CSV-Datei auswählen</string>
+    <string name="import_igc_title">Aus IGC importieren</string>
+    <string name="import_igc_desc">Importiere einen Flug aus einer IGC-Tracklog-Datei. Datum, Schirm, Dauer, Höhe und Distanz werden automatisch ausgelesen.</string>
+    <string name="import_igc_button">IGC-Datei auswählen</string>
+    <string name="danger_zone_title">Gefahrenzone</string>
+    <string name="danger_zone_desc">Aktionen hier können nicht rückgängig gemacht werden.</string>
+    <string name="danger_clear_title">Flugbuch leeren</string>
+    <string name="danger_clear_desc">Löscht alle Flüge unwiderruflich. Schirme bleiben erhalten.</string>
+    <string name="danger_clear_button">Alles löschen</string>
+    <string name="danger_clear_dialog_title">Flugbuch leeren?</string>
+    <string name="danger_clear_dialog_text">Alle Flüge werden unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.</string>
+    <string name="danger_clear_confirm">Ja, alles löschen</string>
+    <string name="export_share_json">Flugbuch exportieren</string>
+    <string name="export_share_csv">Flugbuch CSV exportieren</string>
+    <string name="export_path_label">Exportiert: %s</string>
+
+    <!-- Statistics -->
+    <string name="stats_title">Statistiken</string>
+    <string name="stats_empty">Noch keine Daten für Statistiken</string>
+    <string name="stats_total_flights">Flüge gesamt</string>
+    <string name="stats_total_hours">Flugstunden</string>
+    <string name="stats_by_type">Flüge nach Flugart</string>
+    <string name="stats_by_glider">Flüge nach Schirm</string>
+    <string name="stats_by_month">Flüge pro Monat</string>
+    <string name="stats_last_months">Letzte %d Monate</string>
+    <string name="stats_glider_col">Schirm</string>
+    <string name="stats_flights_col">Flüge</string>
+    <string name="stats_hours_col">Stunden</string>
+    <string name="stats_distance_section">Distanz</string>
+    <string name="stats_dist_total">Gesamt</string>
+    <string name="stats_dist_avg">Ø pro Flug</string>
+    <string name="stats_dist_max">Längstes</string>
+    <string name="stats_dist_by_glider">Distanz pro Schirm</string>
+    <string name="stats_dist_by_month">Distanz pro Monat</string>
+    <string name="stats_altitude_section">Höhe</string>
+    <string name="stats_alt_highest">Höchste</string>
+    <string name="stats_alt_avg">Ø Max-Höhe</string>
+    <string name="stats_alt_by_glider">Höchste Höhe pro Schirm</string>
+    <string name="stats_alt_by_month">Max. Höhe pro Monat</string>
+
+    <!-- FlightType display names -->
+    <string name="flight_type_thermal">Thermikflug</string>
+    <string name="flight_type_thermal_desc">Aufwind genutzt</string>
+    <string name="flight_type_maneuver">Manövertraining</string>
+    <string name="flight_type_maneuver_desc">Aktive Flugübungen</string>
+    <string name="flight_type_siv">SIV</string>
+    <string name="flight_type_siv_desc">Simulated Incident in Flight</string>
+    <string name="flight_type_cross_country">Streckenflug</string>
+    <string name="flight_type_cross_country_desc">Streckenoptimierter Flug</string>
+    <string name="flight_type_hike_fly">Hike &amp; Fly</string>
+    <string name="flight_type_hike_fly_desc">Wandern und Fliegen</string>
+    <string name="flight_type_training">Schulungsflug</string>
+    <string name="flight_type_training_desc">Bodenhandeln &amp; Flugtechnik</string>
+    <string name="flight_type_exam">Prüfungsflug</string>
+    <string name="flight_type_exam_desc">Prüfung der Flugtechnik</string>
+
+    <!-- TrainingExercise display names -->
+    <string name="exercise_reverse_launch">Rückwärtsaufziehen</string>
+    <string name="exercise_speed">Geschwindigkeit</string>
+    <string name="exercise_turn_technique">Kurventechnik</string>
+    <string name="exercise_turn_180">Kurve 180 Grad</string>
+    <string name="exercise_full_circle">Vollkreis</string>
+    <string name="exercise_flat_turns">Kurven flach</string>
+    <string name="exercise_moderate_turns">Kurven mäßig</string>
+    <string name="exercise_landing_approach">Landeeinteilung</string>
+    <string name="exercise_precision_landing">Landung in Markierung</string>
+    <string name="exercise_accelerated">Beschleunigt Fliegen</string>
+    <string name="exercise_side_tuck">Seitlicher Klapper 30%</string>
+    <string name="exercise_figure8_brakes">Leitlinienacht (35 Sekunden)</string>
+    <string name="exercise_slope_eight">Hangacht</string>
+    <string name="exercise_ear_folding">Ohrenanlegen</string>
+    <string name="exercise_ear_folding_acc">Ohrenanlegen Beschleunigt</string>
+    <string name="exercise_pitch_stabilize">Nicken und Stabilisieren</string>
+    <string name="exercise_roll_stabilize">Rollen und Stabilisieren</string>
+    <string name="exercise_groundhandling">Groundhandlen</string>
 </resources>

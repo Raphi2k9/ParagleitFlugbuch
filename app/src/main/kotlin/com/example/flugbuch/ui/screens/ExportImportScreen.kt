@@ -15,9 +15,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.flugbuch.R
 import com.example.flugbuch.viewmodel.FlightViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,6 +34,11 @@ fun ExportImportScreen(
     var isLoading by remember { mutableStateOf(false) }
     var exportedFilePath by remember { mutableStateOf<String?>(null) }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
+
+    // Capture string resources for use in lambdas
+    val shareJsonTitle = stringResource(R.string.export_share_json)
+    val shareCsvTitle = stringResource(R.string.export_share_csv)
+    val exportPathLabel = stringResource(R.string.export_path_label)
 
     LaunchedEffect(message) {
         message?.let {
@@ -82,10 +89,10 @@ fun ExportImportScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Export / Import", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.export_import_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -106,17 +113,17 @@ fun ExportImportScreen(
         ) {
             // Export Sektion
             InfoCard(
-                title = "Daten exportieren",
-                description = "Exportiere alle Flüge als JSON oder CSV-Datei für Backups oder zur Weiterverarbeitung.",
+                title = stringResource(R.string.export_section_title),
+                description = stringResource(R.string.export_section_desc),
                 icon = Icons.Default.Upload
             )
 
             // JSON Export
             ExportImportActionCard(
-                title = "Als JSON exportieren",
-                description = "Vollständiger Export aller Daten im JSON-Format. Ideal für Backups und Re-Import.",
+                title = stringResource(R.string.export_json_title),
+                description = stringResource(R.string.export_json_desc),
                 icon = Icons.Default.DataObject,
-                buttonText = "JSON exportieren",
+                buttonText = stringResource(R.string.export_json_button),
                 buttonEnabled = !isLoading
             ) {
                 isLoading = true
@@ -135,17 +142,17 @@ fun ExportImportScreen(
                             putExtra(Intent.EXTRA_STREAM, fileUri)
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
-                        context.startActivity(Intent.createChooser(shareIntent, "Flugbuch exportieren"))
+                        context.startActivity(Intent.createChooser(shareIntent, shareJsonTitle))
                     }
                 }
             }
 
             // CSV Export
             ExportImportActionCard(
-                title = "Als CSV exportieren",
-                description = "Export im CSV-Format für Tabellenkalkulationen (Excel, LibreOffice).",
+                title = stringResource(R.string.export_csv_title),
+                description = stringResource(R.string.export_csv_desc),
                 icon = Icons.Default.TableChart,
-                buttonText = "CSV exportieren",
+                buttonText = stringResource(R.string.export_csv_button),
                 buttonEnabled = !isLoading
             ) {
                 isLoading = true
@@ -162,7 +169,7 @@ fun ExportImportScreen(
                             putExtra(Intent.EXTRA_STREAM, fileUri)
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
-                        context.startActivity(Intent.createChooser(shareIntent, "Flugbuch CSV exportieren"))
+                        context.startActivity(Intent.createChooser(shareIntent, shareCsvTitle))
                     }
                 }
             }
@@ -171,36 +178,36 @@ fun ExportImportScreen(
 
             // Import Sektion
             InfoCard(
-                title = "Daten importieren",
-                description = "Importiere Flüge aus einer JSON- oder CSV-Datei. Bestehende Flüge bleiben erhalten.",
+                title = stringResource(R.string.import_section_title),
+                description = stringResource(R.string.import_section_desc),
                 icon = Icons.Default.Download
             )
 
             ExportImportActionCard(
-                title = "Aus JSON importieren",
-                description = "Wähle eine JSON-Datei aus, die zuvor mit dieser App exportiert wurde.",
+                title = stringResource(R.string.import_json_title),
+                description = stringResource(R.string.import_json_desc),
                 icon = Icons.Default.FileOpen,
-                buttonText = "JSON-Datei auswählen",
+                buttonText = stringResource(R.string.import_json_button),
                 buttonEnabled = !isLoading
             ) {
                 importJsonLauncher.launch("application/json")
             }
 
             ExportImportActionCard(
-                title = "Aus CSV importieren",
-                description = "Importiere Flüge aus einer CSV-Datei. Unterstützt eigene Spaltennamen (Deutsch & Englisch). Pflichtfelder: Datum, Schirm, Dauer.",
+                title = stringResource(R.string.import_csv_title),
+                description = stringResource(R.string.import_csv_desc),
                 icon = Icons.Default.TableChart,
-                buttonText = "CSV-Datei auswählen",
+                buttonText = stringResource(R.string.import_csv_button),
                 buttonEnabled = !isLoading
             ) {
                 importCsvLauncher.launch("text/*")
             }
 
             ExportImportActionCard(
-                title = "Aus IGC importieren",
-                description = "Importiere einen Flug aus einer IGC-Tracklog-Datei. Datum, Schirm, Dauer, Höhe und Distanz werden automatisch ausgelesen.",
+                title = stringResource(R.string.import_igc_title),
+                description = stringResource(R.string.import_igc_desc),
                 icon = Icons.Default.FlightTakeoff,
-                buttonText = "IGC-Datei auswählen",
+                buttonText = stringResource(R.string.import_igc_button),
                 buttonEnabled = !isLoading
             ) {
                 importIgcLauncher.launch("*/*")
@@ -210,8 +217,8 @@ fun ExportImportScreen(
 
             // Gefahrenzone
             InfoCard(
-                title = "Gefahrenzone",
-                description = "Aktionen hier können nicht rückgängig gemacht werden.",
+                title = stringResource(R.string.danger_zone_title),
+                description = stringResource(R.string.danger_zone_desc),
                 icon = Icons.Default.Warning
             )
 
@@ -232,7 +239,7 @@ fun ExportImportScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "Flugbuch leeren",
+                            stringResource(R.string.danger_clear_title),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onErrorContainer
@@ -240,7 +247,7 @@ fun ExportImportScreen(
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "Löscht alle Flüge unwiderruflich. Schirme bleiben erhalten.",
+                        stringResource(R.string.danger_clear_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f)
                     )
@@ -253,7 +260,7 @@ fun ExportImportScreen(
                         ),
                         modifier = Modifier.align(Alignment.End)
                     ) {
-                        Text("Alles löschen")
+                        Text(stringResource(R.string.danger_clear_button))
                     }
                 }
             }
@@ -262,8 +269,8 @@ fun ExportImportScreen(
                 AlertDialog(
                     onDismissRequest = { showDeleteAllDialog = false },
                     icon = { Icon(Icons.Default.DeleteForever, null, tint = MaterialTheme.colorScheme.error) },
-                    title = { Text("Flugbuch leeren?") },
-                    text = { Text("Alle Flüge werden unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.") },
+                    title = { Text(stringResource(R.string.danger_clear_dialog_title)) },
+                    text = { Text(stringResource(R.string.danger_clear_dialog_text)) },
                     confirmButton = {
                         Button(
                             onClick = {
@@ -274,12 +281,12 @@ fun ExportImportScreen(
                                 containerColor = MaterialTheme.colorScheme.error
                             )
                         ) {
-                            Text("Ja, alles löschen")
+                            Text(stringResource(R.string.danger_clear_confirm))
                         }
                     },
                     dismissButton = {
                         OutlinedButton(onClick = { showDeleteAllDialog = false }) {
-                            Text("Abbrechen")
+                            Text(stringResource(R.string.action_cancel))
                         }
                     }
                 )
@@ -307,7 +314,7 @@ fun ExportImportScreen(
                         Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.secondary)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "Exportiert: $path",
+                            exportPathLabel.format(path),
                             style = MaterialTheme.typography.bodySmall
                         )
                     }

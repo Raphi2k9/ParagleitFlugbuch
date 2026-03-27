@@ -9,8 +9,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.flugbuch.R
 import com.example.flugbuch.data.entities.FlightEntity
 import com.example.flugbuch.data.entities.FlightType
 import com.example.flugbuch.data.entities.TrainingExercise
@@ -25,6 +28,7 @@ fun FlightCard(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY) }
     val formattedDate = remember(flight.date) {
         dateFormat.format(Date(flight.date))
@@ -43,16 +47,16 @@ fun FlightCard(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Flug löschen?") },
-            text = { Text("Flug vom $formattedDate wirklich löschen?") },
+            title = { Text(stringResource(R.string.flight_card_delete_title)) },
+            text = { Text(stringResource(R.string.flight_card_delete_text, formattedDate)) },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false
                     onLongClick()
-                }) { Text("Löschen", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Abbrechen") }
+                TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.action_cancel)) }
             }
         )
     }
@@ -168,7 +172,10 @@ fun FlightCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = if (flight.pruefungBestanden) "Bestanden" else "Nicht bestanden",
+                        text = if (flight.pruefungBestanden)
+                            stringResource(R.string.label_passed)
+                        else
+                            stringResource(R.string.label_failed),
                         style = MaterialTheme.typography.bodySmall,
                         color = if (flight.pruefungBestanden)
                             MaterialTheme.colorScheme.primary
@@ -190,9 +197,10 @@ fun FlightCard(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.width(4.dp))
+                        val names = exercises.take(3).joinToString(", ") { context.getString(it.labelRes) }
+                        val suffix = if (exercises.size > 3) " …" else ""
                         Text(
-                            text = "${exercises.size} Übungen: ${exercises.take(3).joinToString(", ") { it.displayName }}" +
-                                    if (exercises.size > 3) " …" else "",
+                            text = stringResource(R.string.flight_card_exercises, exercises.size, names + suffix),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 2
@@ -232,7 +240,7 @@ fun FlightTypeBadge(flightType: FlightType?) {
         shape = MaterialTheme.shapes.small
     ) {
         Text(
-            text = flightType?.displayName ?: "Unbekannt",
+            text = if (flightType != null) stringResource(flightType.labelRes) else stringResource(R.string.label_unknown),
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
             style = MaterialTheme.typography.labelSmall,
             color = color,

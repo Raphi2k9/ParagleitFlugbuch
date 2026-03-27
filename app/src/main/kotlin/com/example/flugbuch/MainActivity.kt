@@ -1,5 +1,7 @@
 package com.example.flugbuch
 
+import android.content.Context
+import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,8 +22,19 @@ import com.example.flugbuch.ui.theme.ThemePreference
 import com.example.flugbuch.viewmodel.FlightViewModel
 import com.example.flugbuch.viewmodel.StatisticsViewModel
 import com.example.flugbuch.viewmodel.ThemeViewModel
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        val prefs = newBase.getSharedPreferences("flugbuch_prefs", Context.MODE_PRIVATE)
+        val lang = prefs.getString("language", "de") ?: "de"
+        val locale = Locale(lang)
+        Locale.setDefault(locale)
+        val config = Configuration(newBase.resources.configuration)
+        config.setLocale(locale)
+        super.attachBaseContext(newBase.createConfigurationContext(config))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,6 +44,7 @@ class MainActivity : ComponentActivity() {
             val themePreference by themeViewModel.themePreference.collectAsStateWithLifecycle()
             val pilotName by themeViewModel.pilotName.collectAsStateWithLifecycle()
             val licenseNumber by themeViewModel.licenseNumber.collectAsStateWithLifecycle()
+            val language by themeViewModel.language.collectAsStateWithLifecycle()
             val systemDark = isSystemInDarkTheme()
             val isDark = when (themePreference) {
                 ThemePreference.DARK -> true
@@ -44,7 +58,12 @@ class MainActivity : ComponentActivity() {
                     pilotName = pilotName,
                     onPilotNameChange = themeViewModel::setPilotName,
                     licenseNumber = licenseNumber,
-                    onLicenseNumberChange = themeViewModel::setLicenseNumber
+                    onLicenseNumberChange = themeViewModel::setLicenseNumber,
+                    language = language,
+                    onLanguageChange = { lang ->
+                        themeViewModel.setLanguage(lang)
+                        recreate()
+                    }
                 )
             }
         }
@@ -58,7 +77,9 @@ fun FlugbuchApp(
     pilotName: String,
     onPilotNameChange: (String) -> Unit,
     licenseNumber: String,
-    onLicenseNumberChange: (String) -> Unit
+    onLicenseNumberChange: (String) -> Unit,
+    language: String,
+    onLanguageChange: (String) -> Unit
 ) {
     val navController = rememberNavController()
     val flightViewModel: FlightViewModel = viewModel()
@@ -77,7 +98,9 @@ fun FlugbuchApp(
             pilotName = pilotName,
             onPilotNameChange = onPilotNameChange,
             licenseNumber = licenseNumber,
-            onLicenseNumberChange = onLicenseNumberChange
+            onLicenseNumberChange = onLicenseNumberChange,
+            language = language,
+            onLanguageChange = onLanguageChange
         )
     }
 }

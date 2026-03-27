@@ -15,10 +15,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.flugbuch.R
 import com.example.flugbuch.data.entities.FlightType
 import com.example.flugbuch.ui.components.FlightCard
 import com.example.flugbuch.ui.theme.ThemePreference
@@ -51,6 +53,11 @@ fun FlightListScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    val deleteSwipeMsg = stringResource(R.string.flight_delete_swipe)
+    val undoLabel = stringResource(R.string.action_undo)
+    val deleteConfirmMsg = stringResource(R.string.flight_delete_confirm)
+    val deleteLabel = stringResource(R.string.action_delete)
+
     LaunchedEffect(message) {
         message?.let {
             snackbarHostState.showSnackbar(it)
@@ -63,9 +70,9 @@ fun FlightListScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Flugbuch", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold)
                         Text(
-                            "${flights.size} Flüge",
+                            stringResource(R.string.flight_list_subtitle, flights.size),
                             style = MaterialTheme.typography.labelSmall
                         )
                     }
@@ -86,26 +93,26 @@ fun FlightListScreen(
                                 }
                             }
                         ) {
-                            Icon(Icons.Default.FilterList, contentDescription = "Filter & Sortierung")
+                            Icon(Icons.Default.FilterList, contentDescription = stringResource(R.string.flight_list_filter))
                         }
                     }
                     IconButton(onClick = { onNavigateToStats() }) {
-                        Icon(Icons.Default.BarChart, contentDescription = "Statistiken")
+                        Icon(Icons.Default.BarChart, contentDescription = stringResource(R.string.flight_list_statistics))
                     }
                     IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Menü")
+                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.flight_list_menu))
                     }
                     DropdownMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Export / Import") },
+                            text = { Text(stringResource(R.string.flight_list_export_import)) },
                             leadingIcon = { Icon(Icons.Default.ImportExport, null) },
                             onClick = { showMenu = false; onNavigateToExport() }
                         )
                         DropdownMenuItem(
-                            text = { Text("Einstellungen") },
+                            text = { Text(stringResource(R.string.flight_list_settings)) },
                             leadingIcon = { Icon(Icons.Default.Settings, null) },
                             onClick = { showMenu = false; onNavigateToSettings() }
                         )
@@ -117,7 +124,7 @@ fun FlightListScreen(
             ExtendedFloatingActionButton(
                 onClick = onAddFlight,
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("Neuer Flug") }
+                text = { Text(stringResource(R.string.flight_list_new_flight)) }
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -173,8 +180,8 @@ fun FlightListScreen(
                             var undone = false
                             val snackbarJob = launch {
                                 val result = snackbarHostState.showSnackbar(
-                                    message = "Flug löschen...",
-                                    actionLabel = "Rückgängig",
+                                    message = deleteSwipeMsg,
+                                    actionLabel = undoLabel,
                                     duration = SnackbarDuration.Indefinite
                                 )
                                 if (result == SnackbarResult.ActionPerformed) {
@@ -212,7 +219,7 @@ fun FlightListScreen(
                                 if (swipeState.targetValue == SwipeToDismissBoxValue.EndToStart) {
                                     Icon(
                                         Icons.Default.Delete,
-                                        contentDescription = "Löschen",
+                                        contentDescription = stringResource(R.string.action_delete),
                                         tint = MaterialTheme.colorScheme.onErrorContainer
                                     )
                                 }
@@ -225,8 +232,8 @@ fun FlightListScreen(
                             onLongClick = {
                                 scope.launch {
                                     val result = snackbarHostState.showSnackbar(
-                                        message = "Flug löschen?",
-                                        actionLabel = "Löschen",
+                                        message = deleteConfirmMsg,
+                                        actionLabel = deleteLabel,
                                         duration = SnackbarDuration.Short
                                     )
                                     if (result == SnackbarResult.ActionPerformed) {
@@ -269,13 +276,13 @@ private fun EmptyFlightList(modifier: Modifier = Modifier) {
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Noch keine Flüge erfasst",
+            text = stringResource(R.string.flight_list_empty_title),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Tippe auf + um deinen ersten Flug\neinzutragen",
+            text = stringResource(R.string.flight_list_empty_hint),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
             textAlign = TextAlign.Center
@@ -289,9 +296,9 @@ private fun ActiveFilterChips(filterState: FilterState, onClear: () -> Unit) {
         if (filterState.selectedFlightTypes.isNotEmpty()) {
             add(
                 if (filterState.selectedFlightTypes.size == 1)
-                    filterState.selectedFlightTypes.first().displayName
+                    stringResource(filterState.selectedFlightTypes.first().labelRes)
                 else
-                    "${filterState.selectedFlightTypes.size} Flugarten"
+                    stringResource(R.string.filter_active_types, filterState.selectedFlightTypes.size)
             )
         }
         if (filterState.selectedGliders.isNotEmpty()) {
@@ -299,18 +306,18 @@ private fun ActiveFilterChips(filterState: FilterState, onClear: () -> Unit) {
                 if (filterState.selectedGliders.size == 1)
                     filterState.selectedGliders.first()
                 else
-                    "${filterState.selectedGliders.size} Schirme"
+                    stringResource(R.string.filter_active_gliders, filterState.selectedGliders.size)
             )
         }
     }
     InputChip(
         selected = true,
         onClick = onClear,
-        label = { Text("Filter: ${parts.joinToString(", ")}") },
+        label = { Text(stringResource(R.string.filter_prefix, parts.joinToString(", "))) },
         trailingIcon = {
             Icon(
                 Icons.Default.Close,
-                contentDescription = "Filter entfernen",
+                contentDescription = stringResource(R.string.filter_remove),
                 modifier = Modifier.size(16.dp)
             )
         }
@@ -336,14 +343,14 @@ private fun FilterSortSheet(
                 .padding(bottom = 32.dp)
         ) {
             Text(
-                "Filter & Sortierung",
+                stringResource(R.string.filter_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(16.dp))
 
             // --- Sortierung ---
-            Text("Sortierung", style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.filter_sort), style = MaterialTheme.typography.labelLarge)
             Spacer(Modifier.height(8.dp))
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -351,10 +358,10 @@ private fun FilterSortSheet(
             ) {
                 SortOrder.entries.forEach { order ->
                     val label = when (order) {
-                        SortOrder.DATE_DESC -> "Datum ↓"
-                        SortOrder.DATE_ASC -> "Datum ↑"
-                        SortOrder.TYPE -> "Flugart"
-                        SortOrder.GLIDER -> "Schirm"
+                        SortOrder.DATE_DESC -> stringResource(R.string.filter_sort_date_desc)
+                        SortOrder.DATE_ASC -> stringResource(R.string.filter_sort_date_asc)
+                        SortOrder.TYPE -> stringResource(R.string.filter_sort_type)
+                        SortOrder.GLIDER -> stringResource(R.string.filter_sort_glider)
                     }
                     FilterChip(
                         selected = localState.sortOrder == order,
@@ -374,7 +381,7 @@ private fun FilterSortSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Filter nach Flugart", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.filter_by_type), style = MaterialTheme.typography.labelLarge)
                 TextButton(onClick = {
                     localState = if (localState.selectedFlightTypes.size == FlightType.entries.size) {
                         localState.copy(selectedFlightTypes = emptySet())
@@ -384,9 +391,9 @@ private fun FilterSortSheet(
                 }) {
                     Text(
                         if (localState.selectedFlightTypes.size == FlightType.entries.size)
-                            "Alle abwählen"
+                            stringResource(R.string.action_deselect_all)
                         else
-                            "Alle auswählen"
+                            stringResource(R.string.action_select_all)
                     )
                 }
             }
@@ -417,9 +424,9 @@ private fun FilterSortSheet(
                         }
                     )
                     Column {
-                        Text(type.displayName, style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(type.labelRes), style = MaterialTheme.typography.bodyMedium)
                         Text(
-                            type.description,
+                            stringResource(type.descRes),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
@@ -438,7 +445,7 @@ private fun FilterSortSheet(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Filter nach Schirm", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.filter_by_glider), style = MaterialTheme.typography.labelLarge)
                     TextButton(onClick = {
                         localState = if (localState.selectedGliders.size == gliders.size) {
                             localState.copy(selectedGliders = emptySet())
@@ -448,9 +455,9 @@ private fun FilterSortSheet(
                     }) {
                         Text(
                             if (localState.selectedGliders.size == gliders.size)
-                                "Alle abwählen"
+                                stringResource(R.string.action_deselect_all)
                             else
-                                "Alle auswählen"
+                                stringResource(R.string.action_select_all)
                         )
                     }
                 }
@@ -495,13 +502,13 @@ private fun FilterSortSheet(
                     onClick = { localState = FilterState() },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Zurücksetzen")
+                    Text(stringResource(R.string.action_reset))
                 }
                 Button(
                     onClick = { onApply(localState) },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Anwenden")
+                    Text(stringResource(R.string.action_apply))
                 }
             }
         }

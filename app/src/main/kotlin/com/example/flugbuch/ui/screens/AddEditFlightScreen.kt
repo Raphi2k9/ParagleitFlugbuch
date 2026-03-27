@@ -12,10 +12,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.flugbuch.R
 import com.example.flugbuch.data.entities.FlightEntity
 import com.example.flugbuch.data.entities.FlightType
 import com.example.flugbuch.data.entities.TrainingExercise
@@ -181,13 +183,13 @@ fun AddEditFlightScreen(
             TopAppBar(
                 title = {
                     Text(
-                        if (isEditMode) "Flug bearbeiten" else "Neuer Flug",
+                        if (isEditMode) stringResource(R.string.edit_flight_title) else stringResource(R.string.add_flight_title),
                         fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
@@ -196,7 +198,7 @@ fun AddEditFlightScreen(
                         enabled = canSave
                     ) {
                         Text(
-                            "Speichern",
+                            stringResource(R.string.action_save),
                             fontWeight = FontWeight.Bold,
                             color = if (canSave)
                                 MaterialTheme.colorScheme.onPrimary
@@ -223,7 +225,7 @@ fun AddEditFlightScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            SectionHeader("Pflichtfelder")
+            SectionHeader(stringResource(R.string.flight_required_fields))
 
             // ── Datum ────────────────────────────────────────────────────────
             OutlinedCard(
@@ -245,7 +247,7 @@ fun AddEditFlightScreen(
                 ) {
                     Column {
                         Text(
-                            "Datum",
+                            stringResource(R.string.flight_date),
                             style = MaterialTheme.typography.labelMedium,
                             color = if (dateError) MaterialTheme.colorScheme.error
                                     else MaterialTheme.colorScheme.primary
@@ -259,7 +261,7 @@ fun AddEditFlightScreen(
                         )
                         if (dateError) {
                             Text(
-                                "Das Datum darf nicht in der Zukunft liegen",
+                                stringResource(R.string.flight_date_future_error),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.error
                             )
@@ -285,13 +287,13 @@ fun AddEditFlightScreen(
                         gliderName = it
                         gliderTouched = true
                     },
-                    label = { Text("Gleitschirm / Flügel *") },
-                    placeholder = { Text("z.B. Advance Alpha 7") },
+                    label = { Text(stringResource(R.string.flight_glider)) },
+                    placeholder = { Text(stringResource(R.string.flight_glider_hint)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .menuAnchor(MenuAnchorType.PrimaryNotEditable),
                     isError = gliderError,
-                    supportingText = if (gliderError) ({ Text("Pflichtfeld") }) else null,
+                    supportingText = if (gliderError) ({ Text(stringResource(R.string.required_field)) }) else null,
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = showGliderDropdown)
                     },
@@ -324,7 +326,7 @@ fun AddEditFlightScreen(
                     onValueChange = { input ->
                         if (input.length <= 3 && input.all { it.isDigit() }) durationHours = input
                     },
-                    label = { Text("Stunden") },
+                    label = { Text(stringResource(R.string.flight_hours)) },
                     modifier = Modifier.weight(1f),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     trailingIcon = { Text("h", modifier = Modifier.padding(end = 8.dp)) },
@@ -336,7 +338,7 @@ fun AddEditFlightScreen(
                         val v = input.toIntOrNull()
                         if (input.isEmpty() || (v != null && v in 0..59)) durationMinutes = input
                     },
-                    label = { Text("Minuten") },
+                    label = { Text(stringResource(R.string.flight_minutes)) },
                     modifier = Modifier.weight(1f),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     trailingIcon = { Text("min", modifier = Modifier.padding(end = 8.dp)) },
@@ -350,9 +352,9 @@ fun AddEditFlightScreen(
                 onExpandedChange = { showFlightTypeDropdown = it }
             ) {
                 OutlinedTextField(
-                    value = flightType.displayName,
+                    value = stringResource(flightType.labelRes),
                     onValueChange = {},
-                    label = { Text("Flugart *") },
+                    label = { Text(stringResource(R.string.flight_type_field)) },
                     readOnly = true,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -370,9 +372,9 @@ fun AddEditFlightScreen(
                         DropdownMenuItem(
                             text = {
                                 Column {
-                                    Text(type.displayName, fontWeight = FontWeight.Medium)
+                                    Text(stringResource(type.labelRes), fontWeight = FontWeight.Medium)
                                     Text(
-                                        type.description,
+                                        stringResource(type.descRes),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                     )
@@ -392,7 +394,7 @@ fun AddEditFlightScreen(
                 Spacer(modifier = Modifier.height(4.dp))
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(4.dp))
-                SectionHeader("Schulungsübungen")
+                SectionHeader(stringResource(R.string.flight_training_exercises))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -416,7 +418,7 @@ fun AddEditFlightScreen(
                                     }
                                 )
                                 Text(
-                                    text = exercise.displayName,
+                                    text = stringResource(exercise.labelRes),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
@@ -430,7 +432,7 @@ fun AddEditFlightScreen(
                 Spacer(modifier = Modifier.height(4.dp))
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(4.dp))
-                SectionHeader("Prüfungsergebnis")
+                SectionHeader(stringResource(R.string.flight_exam_result))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -438,7 +440,7 @@ fun AddEditFlightScreen(
                     FilterChip(
                         selected = pruefungBestanden == true,
                         onClick = { pruefungBestanden = if (pruefungBestanden == true) null else true },
-                        label = { Text("Bestanden") },
+                        label = { Text(stringResource(R.string.label_passed)) },
                         leadingIcon = if (pruefungBestanden == true) {
                             { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
                         } else null,
@@ -447,7 +449,7 @@ fun AddEditFlightScreen(
                     FilterChip(
                         selected = pruefungBestanden == false,
                         onClick = { pruefungBestanden = if (pruefungBestanden == false) null else false },
-                        label = { Text("Nicht bestanden") },
+                        label = { Text(stringResource(R.string.label_failed)) },
                         leadingIcon = if (pruefungBestanden == false) {
                             { Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp)) }
                         } else null,
@@ -459,13 +461,13 @@ fun AddEditFlightScreen(
             Spacer(modifier = Modifier.height(4.dp))
             HorizontalDivider()
             Spacer(modifier = Modifier.height(4.dp))
-            SectionHeader("Optionale Angaben")
+            SectionHeader(stringResource(R.string.flight_optional_fields))
 
             // ── Start- & Landeplatz ──────────────────────────────────────────
             OutlinedTextField(
                 value = startLocation,
                 onValueChange = { startLocation = it },
-                label = { Text("Startplatz") },
+                label = { Text(stringResource(R.string.flight_start_location)) },
                 modifier = Modifier.fillMaxWidth(),
                 leadingIcon = { Icon(Icons.Default.FlightTakeoff, null) },
                 singleLine = true
@@ -473,7 +475,7 @@ fun AddEditFlightScreen(
             OutlinedTextField(
                 value = landingLocation,
                 onValueChange = { landingLocation = it },
-                label = { Text("Landeplatz") },
+                label = { Text(stringResource(R.string.flight_landing_location)) },
                 modifier = Modifier.fillMaxWidth(),
                 leadingIcon = { Icon(Icons.Default.FlightLand, null) },
                 singleLine = true
@@ -491,7 +493,7 @@ fun AddEditFlightScreen(
                         val filtered = input.filter { it.isDigit() }
                         maxAltitude = filtered
                     },
-                    label = { Text("Max. Höhe") },
+                    label = { Text(stringResource(R.string.flight_max_altitude)) },
                     modifier = Modifier.weight(1f),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     trailingIcon = { Text("m", modifier = Modifier.padding(end = 8.dp)) },
@@ -516,12 +518,12 @@ fun AddEditFlightScreen(
                         }
                         distance = filtered
                     },
-                    label = { Text("Strecke") },
+                    label = { Text(stringResource(R.string.flight_distance)) },
                     modifier = Modifier.weight(1f),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     isError = distanceError,
                     supportingText = if (distanceError) ({
-                        Text("Bitte nur Zahlen eingeben")
+                        Text(stringResource(R.string.numbers_only))
                     }) else null,
                     trailingIcon = { Text("km", modifier = Modifier.padding(end = 4.dp)) },
                     leadingIcon = { Icon(Icons.Default.Route, null) },
@@ -530,15 +532,15 @@ fun AddEditFlightScreen(
             }
 
             HorizontalDivider()
-            SectionHeader("Wetterbedingungen")
+            SectionHeader(stringResource(R.string.flight_weather))
 
             OutlinedTextField(
                 value = windConditions,
                 onValueChange = { windConditions = it },
-                label = { Text("Wind") },
+                label = { Text(stringResource(R.string.flight_wind)) },
                 modifier = Modifier.fillMaxWidth(),
                 leadingIcon = { Icon(Icons.Default.Air, null) },
-                placeholder = { Text("z.B. NW 15 km/h, böig") },
+                placeholder = { Text(stringResource(R.string.flight_wind_hint)) },
                 singleLine = true
             )
 
@@ -549,10 +551,10 @@ fun AddEditFlightScreen(
                 OutlinedTextField(
                     value = cloudCover,
                     onValueChange = { cloudCover = it },
-                    label = { Text("Bewölkung") },
+                    label = { Text(stringResource(R.string.flight_cloud_cover)) },
                     modifier = Modifier.weight(1f),
                     leadingIcon = { Icon(Icons.Default.Cloud, null) },
-                    placeholder = { Text("z.B. 3/8") },
+                    placeholder = { Text(stringResource(R.string.flight_cloud_cover_hint)) },
                     singleLine = true
                 )
                 // Temperatur: ganze Zahl, auch negativ
@@ -569,12 +571,12 @@ fun AddEditFlightScreen(
                         }
                         temperature = filtered
                     },
-                    label = { Text("Temperatur") },
+                    label = { Text(stringResource(R.string.flight_temperature)) },
                     modifier = Modifier.weight(1f),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     isError = temperatureError,
                     supportingText = if (temperatureError) ({
-                        Text("Bitte nur Zahlen eingeben")
+                        Text(stringResource(R.string.numbers_only))
                     }) else null,
                     trailingIcon = { Text("°C", modifier = Modifier.padding(end = 4.dp)) },
                     leadingIcon = { Icon(Icons.Default.Thermostat, null) },
@@ -583,12 +585,12 @@ fun AddEditFlightScreen(
             }
 
             HorizontalDivider()
-            SectionHeader("Notizen")
+            SectionHeader(stringResource(R.string.flight_notes_section))
 
             OutlinedTextField(
                 value = notes,
                 onValueChange = { notes = it },
-                label = { Text("Persönliche Bemerkungen") },
+                label = { Text(stringResource(R.string.flight_notes)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 100.dp),
@@ -605,7 +607,7 @@ fun AddEditFlightScreen(
             ) {
                 Icon(Icons.Default.Save, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(if (isEditMode) "Änderungen speichern" else "Flug speichern")
+                Text(if (isEditMode) stringResource(R.string.flight_save_edit) else stringResource(R.string.flight_save_new))
             }
         }
     }
@@ -622,10 +624,10 @@ fun AddEditFlightScreen(
                         }
                         showDatePicker = false
                     }
-                ) { Text("OK") }
+                ) { Text(stringResource(R.string.action_ok)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Abbrechen") }
+                TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.action_cancel)) }
             }
         ) {
             DatePicker(state = datePickerState)

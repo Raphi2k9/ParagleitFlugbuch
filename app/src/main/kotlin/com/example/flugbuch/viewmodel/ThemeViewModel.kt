@@ -25,6 +25,9 @@ class ThemeViewModel(application: Application) : AndroidViewModel(application) {
     private val _licenseNumber = MutableStateFlow(prefs.getString("license_number", "") ?: "")
     val licenseNumber: StateFlow<String> = _licenseNumber.asStateFlow()
 
+    private val _language = MutableStateFlow(prefs.getString("language", "de") ?: "de")
+    val language: StateFlow<String> = _language.asStateFlow()
+
     fun setTheme(theme: ThemePreference) {
         _themePreference.value = theme
         prefs.edit().putString("theme", theme.name).apply()
@@ -38,5 +41,10 @@ class ThemeViewModel(application: Application) : AndroidViewModel(application) {
     fun setLicenseNumber(number: String) {
         _licenseNumber.value = number
         prefs.edit().putString("license_number", number).apply()
+    }
+
+    fun setLanguage(lang: String) {
+        _language.value = lang
+        prefs.edit().putString("language", lang).apply()
     }
 }

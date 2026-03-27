@@ -9,8 +9,10 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.flugbuch.R
 import com.example.flugbuch.ui.theme.ThemePreference
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -22,6 +24,8 @@ fun SettingsScreen(
     onPilotNameChange: (String) -> Unit,
     licenseNumber: String,
     onLicenseNumberChange: (String) -> Unit,
+    language: String,
+    onLanguageChange: (String) -> Unit,
     onNavigateBack: () -> Unit
 ) {
     var nameInput by remember(pilotName) { mutableStateOf(pilotName) }
@@ -30,10 +34,10 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Einstellungen", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.settings_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -55,7 +59,7 @@ fun SettingsScreen(
         ) {
             // --- Pilotendaten ---
             Text(
-                "Pilotendaten",
+                stringResource(R.string.settings_pilot_section),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -64,21 +68,21 @@ fun SettingsScreen(
             OutlinedTextField(
                 value = nameInput,
                 onValueChange = { nameInput = it },
-                label = { Text("Name") },
+                label = { Text(stringResource(R.string.settings_pilot_name)) },
                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                supportingText = { Text("Wird in Exporten und Berichten verwendet") }
+                supportingText = { Text(stringResource(R.string.settings_pilot_name_hint)) }
             )
 
             OutlinedTextField(
                 value = licenseInput,
                 onValueChange = { licenseInput = it },
-                label = { Text("Lizenznummer") },
+                label = { Text(stringResource(R.string.settings_license)) },
                 leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                supportingText = { Text("Offizielle Pilotenlizenz-Nummer") }
+                supportingText = { Text(stringResource(R.string.settings_license_hint)) }
             )
 
             Button(
@@ -90,14 +94,14 @@ fun SettingsScreen(
             ) {
                 Icon(Icons.Default.Save, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Speichern")
+                Text(stringResource(R.string.action_save))
             }
 
             HorizontalDivider()
 
             // --- Design ---
             Text(
-                "Design",
+                stringResource(R.string.settings_design_section),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -105,26 +109,52 @@ fun SettingsScreen(
 
             ThemeOption(
                 icon = Icons.Default.BrightnessAuto,
-                label = "System-Theme",
-                description = "Folgt der Geräteeinstellung",
+                label = stringResource(R.string.settings_theme_system),
+                description = stringResource(R.string.settings_theme_system_desc),
                 selected = themePreference == ThemePreference.SYSTEM,
                 onClick = { onThemeChange(ThemePreference.SYSTEM) }
             )
 
             ThemeOption(
                 icon = Icons.Default.LightMode,
-                label = "Hell",
-                description = "Heller Hintergrund",
+                label = stringResource(R.string.settings_theme_light),
+                description = stringResource(R.string.settings_theme_light_desc),
                 selected = themePreference == ThemePreference.LIGHT,
                 onClick = { onThemeChange(ThemePreference.LIGHT) }
             )
 
             ThemeOption(
                 icon = Icons.Default.DarkMode,
-                label = "Dunkel",
-                description = "Dunkler Hintergrund",
+                label = stringResource(R.string.settings_theme_dark),
+                description = stringResource(R.string.settings_theme_dark_desc),
                 selected = themePreference == ThemePreference.DARK,
                 onClick = { onThemeChange(ThemePreference.DARK) }
+            )
+
+            HorizontalDivider()
+
+            // --- Sprache / Language ---
+            Text(
+                stringResource(R.string.settings_language_section),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            ThemeOption(
+                icon = Icons.Default.Language,
+                label = stringResource(R.string.settings_language_german),
+                description = stringResource(R.string.settings_language_german_desc),
+                selected = language == "de",
+                onClick = { onLanguageChange("de") }
+            )
+
+            ThemeOption(
+                icon = Icons.Default.Language,
+                label = stringResource(R.string.settings_language_english),
+                description = stringResource(R.string.settings_language_english_desc),
+                selected = language == "en",
+                onClick = { onLanguageChange("en") }
             )
         }
     }
