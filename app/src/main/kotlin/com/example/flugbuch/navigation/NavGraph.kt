@@ -6,13 +6,11 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.example.flugbuch.ui.screens.AddEditFlightScreen
-import com.example.flugbuch.ui.screens.ExportImportScreen
-import com.example.flugbuch.ui.screens.FlightListScreen
-import com.example.flugbuch.ui.screens.SettingsScreen
-import com.example.flugbuch.ui.screens.StatisticsScreen
+import com.example.flugbuch.ui.screens.*
 import com.example.flugbuch.ui.theme.ThemePreference
+import com.example.flugbuch.viewmodel.AuthViewModel
 import com.example.flugbuch.viewmodel.FlightViewModel
+import com.example.flugbuch.viewmodel.SchoolViewModel
 import com.example.flugbuch.viewmodel.StatisticsViewModel
 
 @Composable
@@ -20,6 +18,8 @@ fun NavGraph(
     navController: NavHostController,
     flightViewModel: FlightViewModel,
     statisticsViewModel: StatisticsViewModel,
+    authViewModel: AuthViewModel,
+    schoolViewModel: SchoolViewModel,
     themePreference: ThemePreference,
     onThemeChange: (ThemePreference) -> Unit,
     pilotName: String,
@@ -27,12 +27,29 @@ fun NavGraph(
     licenseNumber: String,
     onLicenseNumberChange: (String) -> Unit,
     language: String,
-    onLanguageChange: (String) -> Unit
+    onLanguageChange: (String) -> Unit,
+    startDestination: String
 ) {
     NavHost(
         navController = navController,
-        startDestination = Routes.FlightList.route
+        startDestination = startDestination
     ) {
+        // ---- Auth ----------------------------------------------------------------
+        composable(Routes.Login.route) {
+            LoginScreen(
+                viewModel = authViewModel,
+                onNavigateToRegister = { navController.navigate(Routes.Register.route) }
+            )
+        }
+
+        composable(Routes.Register.route) {
+            RegisterScreen(
+                viewModel = authViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // ---- Haupt-App -----------------------------------------------------------
         composable(Routes.FlightList.route) {
             FlightListScreen(
                 viewModel = flightViewModel,
@@ -92,6 +109,51 @@ fun NavGraph(
                 onLicenseNumberChange = onLicenseNumberChange,
                 language = language,
                 onLanguageChange = onLanguageChange,
+                onNavigateBack = { navController.popBackStack() },
+                authViewModel = authViewModel,
+                onLogout = {
+                    authViewModel.logout()
+                    navController.navigate(Routes.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onNavigateToSchoolDashboard = { schoolId ->
+                    navController.navigate(Routes.SchoolDashboard.createRoute(schoolId))
+                },
+                onNavigateToJoinSchool = {
+                    navController.navigate(Routes.JoinSchool.route)
+                },
+                onNavigateToCreateSchool = {
+                    navController.navigate(Routes.CreateSchool.route)
+                }
+            )
+        }
+
+        // ---- Flugschule ----------------------------------------------------------
+        composable(
+            route = Routes.SchoolDashboard.route,
+            arguments = listOf(navArgument("schoolId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val schoolId = backStackEntry.arguments?.getString("schoolId") ?: ""
+            SchoolDashboardScreen(
+                schoolViewModel = schoolViewModel,
+                authViewModel = authViewModel,
+                schoolId = schoolId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.JoinSchool.route) {
+            JoinSchoolScreen(
+                authViewModel = authViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.CreateSchool.route) {
+            CreateSchoolScreen(
+                schoolViewModel = schoolViewModel,
+                authViewModel = authViewModel,
                 onNavigateBack = { navController.popBackStack() }
             )
         }

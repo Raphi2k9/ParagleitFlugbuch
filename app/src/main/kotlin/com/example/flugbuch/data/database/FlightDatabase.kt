@@ -13,7 +13,7 @@ import com.example.flugbuch.data.entities.GliderEntity
 
 @Database(
     entities = [FlightEntity::class, GliderEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class FlightDatabase : RoomDatabase() {
@@ -37,6 +37,14 @@ abstract class FlightDatabase : RoomDatabase() {
             }
         }
 
+        // Neu: userId (wessen Flug) und supabaseId (UUID in der Cloud)
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE flights ADD COLUMN userId TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE flights ADD COLUMN supabaseId TEXT")
+            }
+        }
+
         fun getDatabase(context: Context): FlightDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -44,7 +52,7 @@ abstract class FlightDatabase : RoomDatabase() {
                     FlightDatabase::class.java,
                     "flugbuch_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build().also { INSTANCE = it }
             }
         }

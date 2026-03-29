@@ -10,11 +10,23 @@ interface FlightDao {
     @Query("SELECT * FROM flights ORDER BY date DESC")
     fun getAllFlights(): Flow<List<FlightEntity>>
 
+    @Query("SELECT * FROM flights WHERE userId = :userId ORDER BY date DESC")
+    fun getFlightsByUser(userId: String): Flow<List<FlightEntity>>
+
     @Query("SELECT * FROM flights WHERE id = :id")
     suspend fun getFlightById(id: Int): FlightEntity?
 
+    @Query("SELECT * FROM flights WHERE supabaseId = :supabaseId LIMIT 1")
+    suspend fun getFlightBySupabaseId(supabaseId: String): FlightEntity?
+
     @Query("SELECT * FROM flights ORDER BY date DESC")
     suspend fun getAllFlightsOnce(): List<FlightEntity>
+
+    @Query("SELECT * FROM flights WHERE userId = :userId ORDER BY date DESC")
+    suspend fun getAllFlightsByUserOnce(userId: String): List<FlightEntity>
+
+    @Query("SELECT * FROM flights WHERE supabaseId IS NULL AND userId != ''")
+    suspend fun getUnsyncedFlights(): List<FlightEntity>
 
     @Query("SELECT * FROM flights WHERE flightType = :type ORDER BY date DESC")
     fun getFlightsByType(type: String): Flow<List<FlightEntity>>
@@ -48,4 +60,7 @@ interface FlightDao {
 
     @Query("DELETE FROM flights")
     suspend fun deleteAllFlights()
+
+    @Query("DELETE FROM flights WHERE userId = :userId")
+    suspend fun deleteAllFlightsByUser(userId: String)
 }

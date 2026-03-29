@@ -10,16 +10,19 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
+import com.example.flugbuch.auth.AuthState
 import com.example.flugbuch.navigation.NavGraph
+import com.example.flugbuch.navigation.Routes
 import com.example.flugbuch.ui.theme.FlugbuchTheme
 import com.example.flugbuch.ui.theme.ThemePreference
+import com.example.flugbuch.viewmodel.AuthViewModel
 import com.example.flugbuch.viewmodel.FlightViewModel
+import com.example.flugbuch.viewmodel.SchoolViewModel
 import com.example.flugbuch.viewmodel.StatisticsViewModel
 import com.example.flugbuch.viewmodel.ThemeViewModel
 import java.util.Locale
@@ -41,66 +44,81 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val themeViewModel: ThemeViewModel = viewModel()
+            val authViewModel: AuthViewModel = viewModel()
+            val flightViewModel: FlightViewModel = viewModel()
+            val statisticsViewModel: StatisticsViewModel = viewModel()
+            val schoolViewModel: SchoolViewModel = viewModel()
+
             val themePreference by themeViewModel.themePreference.collectAsStateWithLifecycle()
             val pilotName by themeViewModel.pilotName.collectAsStateWithLifecycle()
             val licenseNumber by themeViewModel.licenseNumber.collectAsStateWithLifecycle()
             val language by themeViewModel.language.collectAsStateWithLifecycle()
+            val authState by authViewModel.authState.collectAsStateWithLifecycle()
+
             val systemDark = isSystemInDarkTheme()
             val isDark = when (themePreference) {
                 ThemePreference.DARK -> true
                 ThemePreference.LIGHT -> false
                 ThemePreference.SYSTEM -> systemDark
             }
+
+            // userId in FlightViewModel setzen sobald eingeloggt
+            LaunchedEffect(authState) {
+                if (authState is AuthState.LoggedIn) {
+                    flightViewModel.currentUserId = (authState as AuthState.LoggedIn).profile.id
+                }
+            }
+
+            // Startdestination abhängig vom Auth-Status
+            val startDestination = when (authState) {
+                is AuthState.LoggedIn -> Routes.FlightList.route
+                is AuthState.LoggedOut, is AuthState.Error -> Routes.Login.route
+                is AuthState.Loading -> Routes.Login.route
+            }
+
             FlugbuchTheme(darkTheme = isDark, dynamicColor = false) {
-                FlugbuchApp(
-                    themePreference = themePreference,
-                    onThemeChange = themeViewModel::setTheme,
-                    pilotName = pilotName,
-                    onPilotNameChange = themeViewModel::setPilotName,
-                    licenseNumber = licenseNumber,
-                    onLicenseNumberChange = themeViewModel::setLicenseNumber,
-                    language = language,
-                    onLanguageChange = { lang ->
-                        themeViewModel.setLanguage(lang)
-                        recreate()
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    val navController = rememberNavController()
+
+                    // Wenn Auth-Status sich ändert, zur richtigen Destination navigieren
+                    LaunchedEffect(authState) {
+                        when (authState) {
+                            is AuthState.LoggedIn ->
+                                navController.navigate(Routes.FlightList.route) {
+                                    popUpTo(Routes.Login.route) { inclusive = true }
+                                }
+                            is AuthState.LoggedOut ->
+                                navController.navigate(Routes.Login.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            else -> {}
+                        }
                     }
-                )
+
+                    NavGraph(
+                        navController = navController,
+                        flightViewModel = flightViewModel,
+                        statisticsViewModel = statisticsViewModel,
+                        authViewModel = authViewModel,
+                        schoolViewModel = schoolViewModel,
+                        themePreference = themePreference,
+                        onThemeChange = themeViewModel::setTheme,
+                        pilotName = pilotName,
+                        onPilotNameChange = themeViewModel::setPilotName,
+                        licenseNumber = licenseNumber,
+                        onLicenseNumberChange = themeViewModel::setLicenseNumber,
+                        language = language,
+                        onLanguageChange = { lang ->
+                            themeViewModel.setLanguage(lang)
+                            recreate()
+                        },
+                        startDestination = startDestination
+                    )
+                }
             }
         }
-    }
-}
-
-@Composable
-fun FlugbuchApp(
-    themePreference: ThemePreference,
-    onThemeChange: (ThemePreference) -> Unit,
-    pilotName: String,
-    onPilotNameChange: (String) -> Unit,
-    licenseNumber: String,
-    onLicenseNumberChange: (String) -> Unit,
-    language: String,
-    onLanguageChange: (String) -> Unit
-) {
-    val navController = rememberNavController()
-    val flightViewModel: FlightViewModel = viewModel()
-    val statisticsViewModel: StatisticsViewModel = viewModel()
-
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        NavGraph(
-            navController = navController,
-            flightViewModel = flightViewModel,
-            statisticsViewModel = statisticsViewModel,
-            themePreference = themePreference,
-            onThemeChange = onThemeChange,
-            pilotName = pilotName,
-            onPilotNameChange = onPilotNameChange,
-            licenseNumber = licenseNumber,
-            onLicenseNumberChange = onLicenseNumberChange,
-            language = language,
-            onLanguageChange = onLanguageChange
-        )
     }
 }

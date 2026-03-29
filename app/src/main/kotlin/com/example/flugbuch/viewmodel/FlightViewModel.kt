@@ -10,6 +10,7 @@ import com.example.flugbuch.data.entities.FlightEntity
 import com.example.flugbuch.data.entities.FlightType
 import com.example.flugbuch.data.entities.GliderEntity
 import com.example.flugbuch.data.repository.FlightRepository
+import com.example.flugbuch.data.repository.SupabaseFlightRepository
 import com.example.flugbuch.igc.Coords
 import com.example.flugbuch.igc.parseIgc
 import com.google.gson.Gson
@@ -37,6 +38,10 @@ class FlightViewModel(application: Application) : AndroidViewModel(application) 
 
     private val db = FlightDatabase.getDatabase(application)
     private val repository = FlightRepository(db.flightDao(), db.gliderDao())
+    private val supabaseRepo = SupabaseFlightRepository()
+
+    // Aktuell eingeloggter User (wird von MainActivity gesetzt)
+    var currentUserId: String = ""
 
     val allGliders: StateFlow<List<GliderEntity>> = repository.allGliders
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -77,16 +82,41 @@ class FlightViewModel(application: Application) : AndroidViewModel(application) 
         _filterState.value = newState
     }
 
+    // ---- CRUD mit Supabase-Sync ------------------------------------------------
+
     fun insertFlight(flight: FlightEntity) {
-        viewModelScope.launch { repository.insertFlight(flight) }
+        viewModelScope.launch {
+            val withUser = flight.copy(userId = currentUserId)
+            val localId = repository.insertFlight(withUser)
+            // In Supabase hochladen und supabaseId zurückspeichern
+            if (currentUserId.isNotBlank()) {
+                val model = supabaseRepo.insertFlight(withUser.toFlightModel())
+                if (model?.id?.isNotBlank() == true) {
+                    val localFlight = db.flightDao().getFlightById(localId.toInt())
+                    if (localFlight != null) {
+                        db.flightDao().updateFlight(localFlight.copy(supabaseId = model.id))
+                    }
+                }
+            }
+        }
     }
 
     fun updateFlight(flight: FlightEntity) {
-        viewModelScope.launch { repository.updateFlight(flight) }
+        viewModelScope.launch {
+            repository.updateFlight(flight)
+            if (flight.supabaseId != null) {
+                supabaseRepo.updateFlight(flight.toFlightModel())
+            }
+        }
     }
 
     fun deleteFlight(flight: FlightEntity) {
-        viewModelScope.launch { repository.deleteFlight(flight) }
+        viewModelScope.launch {
+            repository.deleteFlight(flight)
+            if (flight.supabaseId != null) {
+                supabaseRepo.deleteFlight(flight.supabaseId)
+            }
+        }
     }
 
     suspend fun getFlightById(id: Int): FlightEntity? =
@@ -102,6 +132,8 @@ class FlightViewModel(application: Application) : AndroidViewModel(application) 
             _message.value = "Flugbuch geleert"
         }
     }
+
+    // ---- Export / Import (unverändert) ----------------------------------------
 
     fun exportFlightsToJson(context: Context, onResult: (File?) -> Unit) {
         viewModelScope.launch {
@@ -150,7 +182,9 @@ class FlightViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val type = object : TypeToken<List<FlightEntity>>() {}.type
                 val flights: List<FlightEntity> = Gson().fromJson(jsonContent, type)
-                repository.importFlights(flights)
+                flights.forEach { flight ->
+                    insertFlight(flight.copy(id = 0, userId = currentUserId, supabaseId = null))
+                }
                 onResult(flights.size)
                 _message.value = "${flights.size} Flüge importiert"
             } catch (e: Exception) {
@@ -172,23 +206,22 @@ class FlightViewModel(application: Application) : AndroidViewModel(application) 
 
                 val headers = parseCsvLine(lines[0]).map { it.trim().lowercase() }
 
-                // Column index mapping (supports German and English names)
                 fun col(vararg names: String) = names.firstNotNullOfOrNull { name ->
                     headers.indexOfFirst { it == name }.takeIf { it >= 0 }
                 }
 
-                val idxDate         = col("date", "datum", "flugdatum")
-                val idxGlider       = col("glidername", "glider", "schirm", "gleitschirm", "flügel")
-                val idxDuration     = col("durationminutes", "duration", "dauer", "dauerminuten", "flugzeit", "minuten")
-                val idxType         = col("flighttype", "type", "flugtyp", "typ")
-                val idxStart        = col("startlocation", "start", "startort", "startplatz", "abflug")
-                val idxLanding      = col("landinglocation", "landing", "landeplatz", "landung", "ziel")
-                val idxAltitude     = col("maxaltitude", "altitude", "hoehe", "höhe", "maxhoehe", "maxhöhe", "hoehe_m")
-                val idxDistance     = col("distance", "distanz", "strecke", "km")
-                val idxWind         = col("windconditions", "wind", "windbedingungen")
-                val idxCloud        = col("cloudcover", "cloud", "bedeckung", "wolken")
-                val idxTemp         = col("temperature", "temp", "temperatur")
-                val idxNotes        = col("notes", "notizen", "bemerkungen", "anmerkungen", "kommentar")
+                val idxDate     = col("date", "datum", "flugdatum")
+                val idxGlider   = col("glidername", "glider", "schirm", "gleitschirm", "flügel")
+                val idxDuration = col("durationminutes", "duration", "dauer", "dauerminuten", "flugzeit", "minuten")
+                val idxType     = col("flighttype", "type", "flugtyp", "typ")
+                val idxStart    = col("startlocation", "start", "startort", "startplatz", "abflug")
+                val idxLanding  = col("landinglocation", "landing", "landeplatz", "landung", "ziel")
+                val idxAltitude = col("maxaltitude", "altitude", "hoehe", "höhe", "maxhoehe", "maxhöhe", "hoehe_m")
+                val idxDistance = col("distance", "distanz", "strecke", "km")
+                val idxWind     = col("windconditions", "wind", "windbedingungen")
+                val idxCloud    = col("cloudcover", "cloud", "bedeckung", "wolken")
+                val idxTemp     = col("temperature", "temp", "temperatur")
+                val idxNotes    = col("notes", "notizen", "bemerkungen", "anmerkungen", "kommentar")
 
                 if (idxDate == null || idxGlider == null || idxDuration == null) {
                     _message.value = "CSV fehlt Pflichtfelder: Datum, Schirm oder Dauer"
@@ -208,18 +241,14 @@ class FlightViewModel(application: Application) : AndroidViewModel(application) 
 
                 fun parseFlightType(raw: String): String {
                     val s = raw.trim()
-                    // Try enum name first
                     FlightType.entries.firstOrNull { it.name.equals(s, ignoreCase = true) }?.let { return it.name }
-                    // Try display name
                     FlightType.entries.firstOrNull { it.displayName.equals(s, ignoreCase = true) }?.let { return it.name }
-                    // Fuzzy: contains
                     FlightType.entries.firstOrNull { it.displayName.contains(s, ignoreCase = true) || s.contains(it.displayName, ignoreCase = true) }?.let { return it.name }
                     return FlightType.THERMAL.name
                 }
 
                 fun parseDuration(raw: String): Int {
                     val trimmed = raw.trim()
-                    // hh:mm format
                     val colonIdx = trimmed.indexOf(':')
                     if (colonIdx > 0) {
                         val h = trimmed.substring(0, colonIdx).toIntOrNull() ?: 0
@@ -241,23 +270,18 @@ class FlightViewModel(application: Application) : AndroidViewModel(application) 
                     val duration = parseDuration(get(idxDuration))
 
                     flights.add(FlightEntity(
-                        id = 0,
-                        date = date,
-                        gliderName = glider,
-                        durationMinutes = duration,
+                        id = 0, date = date, gliderName = glider, durationMinutes = duration,
                         flightType = parseFlightType(get(idxType)),
-                        startLocation = get(idxStart),
-                        landingLocation = get(idxLanding),
+                        startLocation = get(idxStart), landingLocation = get(idxLanding),
                         maxAltitude = get(idxAltitude).toIntOrNull(),
                         distance = get(idxDistance).replace(',', '.').toDoubleOrNull(),
-                        windConditions = get(idxWind),
-                        cloudCover = get(idxCloud),
-                        temperature = get(idxTemp).toIntOrNull(),
-                        notes = get(idxNotes)
+                        windConditions = get(idxWind), cloudCover = get(idxCloud),
+                        temperature = get(idxTemp).toIntOrNull(), notes = get(idxNotes),
+                        userId = currentUserId
                     ))
                 }
 
-                repository.importFlights(flights)
+                flights.forEach { insertFlight(it) }
                 onResult(flights.size)
                 _message.value = "${flights.size} Flüge aus CSV importiert"
             } catch (e: Exception) {
@@ -275,9 +299,7 @@ class FlightViewModel(application: Application) : AndroidViewModel(application) 
         while (i < line.length) {
             val c = line[i]
             when {
-                c == '"' && inQuotes && i + 1 < line.length && line[i + 1] == '"' -> {
-                    current.append('"'); i++
-                }
+                c == '"' && inQuotes && i + 1 < line.length && line[i + 1] == '"' -> { current.append('"'); i++ }
                 c == '"' -> inQuotes = !inQuotes
                 c == ',' && !inQuotes -> { result.add(current.toString()); current.clear() }
                 c == ';' && !inQuotes -> { result.add(current.toString()); current.clear() }
@@ -305,9 +327,10 @@ class FlightViewModel(application: Application) : AndroidViewModel(application) 
                     distance = igc.trackDistanceKm,
                     startLocation = startLocation,
                     landingLocation = landingLocation,
-                    notes = igc.pilot?.let { "Pilot: $it" } ?: ""
+                    notes = igc.pilot?.let { "Pilot: $it" } ?: "",
+                    userId = currentUserId
                 )
-                repository.importFlights(listOf(flight))
+                insertFlight(flight)
                 onResult(1)
                 _message.value = "IGC-Flug importiert (${igc.date})"
             } catch (e: Exception) {
@@ -325,8 +348,7 @@ class FlightViewModel(application: Application) : AndroidViewModel(application) 
                 ?.firstOrNull()
                 ?.let { addr ->
                     listOfNotNull(addr.locality ?: addr.subAdminArea, addr.adminArea)
-                        .joinToString(", ")
-                        .ifBlank { null }
+                        .joinToString(", ").ifBlank { null }
                 } ?: coordsToString(coords)
         }.getOrElse { coordsToString(coords) }
     }
@@ -337,7 +359,5 @@ class FlightViewModel(application: Application) : AndroidViewModel(application) 
         return "%.4f°%s, %.4f°%s".format(Math.abs(coords.lat), latDir, Math.abs(coords.lng), lngDir)
     }
 
-    fun clearMessage() {
-        _message.value = null
-    }
+    fun clearMessage() { _message.value = null }
 }

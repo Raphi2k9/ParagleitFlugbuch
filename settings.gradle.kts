@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "ParagleitFlugbuch"
 include(":app")
+include(":shared")
