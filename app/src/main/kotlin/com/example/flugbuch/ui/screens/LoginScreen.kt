@@ -13,18 +13,22 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.flugbuch.R
 import com.example.flugbuch.auth.AuthState
 import com.example.flugbuch.viewmodel.AuthViewModel
 
 @Composable
 fun LoginScreen(
     viewModel: AuthViewModel,
-    onNavigateToRegister: () -> Unit
+    onNavigateToRegister: () -> Unit,
+    language: String = "de",
+    onLanguageChange: (String) -> Unit = {}
 ) {
     val authState by viewModel.authState.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -35,20 +39,40 @@ fun LoginScreen(
 
     val errorMessage = if (authState is AuthState.Error) (authState as AuthState.Error).message else null
 
-    LaunchedEffect(authState) {
-        if (authState is AuthState.Error) {
-            // Fehler wird inline angezeigt
-        }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
+            .imePadding()
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        // Language toggle (top right)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            TextButton(
+                onClick = { onLanguageChange("de") },
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = if (language == "de")
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) { Text("DE") }
+            TextButton(
+                onClick = { onLanguageChange("en") },
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = if (language == "en")
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) { Text("EN") }
+        }
+
         // Header
         Text(
             text = "Flugbuch",
@@ -64,7 +88,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(48.dp))
 
         Text(
-            text = "Anmelden",
+            text = stringResource(R.string.login_title),
             style = MaterialTheme.typography.headlineMedium
         )
 
@@ -77,7 +101,7 @@ fun LoginScreen(
                 email = it
                 viewModel.clearError()
             },
-            label = { Text("E-Mail") },
+            label = { Text(stringResource(R.string.login_email)) },
             leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             singleLine = true,
@@ -94,13 +118,16 @@ fun LoginScreen(
                 password = it
                 viewModel.clearError()
             },
-            label = { Text("Passwort") },
+            label = { Text(stringResource(R.string.login_password)) },
             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
             trailingIcon = {
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(
                         if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = if (passwordVisible) "Verbergen" else "Anzeigen"
+                        contentDescription = if (passwordVisible)
+                            stringResource(R.string.login_password_hide)
+                        else
+                            stringResource(R.string.login_password_show)
                     )
                 }
             },
@@ -138,7 +165,7 @@ fun LoginScreen(
                     strokeWidth = 2.dp
                 )
             } else {
-                Text("Anmelden")
+                Text(stringResource(R.string.login_button))
             }
         }
 
@@ -146,7 +173,7 @@ fun LoginScreen(
 
         // Registrieren
         TextButton(onClick = onNavigateToRegister) {
-            Text("Noch kein Konto? Registrieren")
+            Text(stringResource(R.string.login_register_prompt))
         }
     }
 }

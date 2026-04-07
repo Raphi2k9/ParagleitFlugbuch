@@ -7,11 +7,21 @@ import com.example.flugbuch.data.model.StudentWithFlights
 import com.example.flugbuch.data.model.UserProfile
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 class SchoolRepository {
 
     private val supabase = SupabaseClientProvider.client
     private val flightRepo = SupabaseFlightRepository()
+
+    // Separates Insert-DTO ohne id/createdAt, damit Postgres die UUID selbst generiert
+    @Serializable
+    private data class SchoolInsert(
+        val name: String,
+        val location: String,
+        @SerialName("invite_code") val inviteCode: String
+    )
 
     // Schule anhand der Schul-ID laden
     suspend fun getSchool(schoolId: String): School? {
@@ -27,7 +37,7 @@ class SchoolRepository {
         val inviteCode = generateInviteCode()
         return runCatching {
             supabase.postgrest["schools"]
-                .insert(School(name = name, location = location, inviteCode = inviteCode)) { select() }
+                .insert(SchoolInsert(name = name, location = location, inviteCode = inviteCode)) { select() }
                 .decodeSingleOrNull<School>()
         }.getOrNull()
     }
@@ -59,13 +69,30 @@ class SchoolRepository {
         }.getOrDefault(emptyList())
     }
 
-    // Alle Schüler mit ihren Flügen (für das Dashboard)
+    // Alle Mitglieder der Schule (Schüler + Lehrer) für Dashboard
     suspend fun getStudentsWithFlights(schoolId: String): List<StudentWithFlights> {
         val students = getStudents(schoolId)
         return students.map { student ->
             val flights = flightRepo.getFlightsByUser(student.id)
             StudentWithFlights(profile = student, flights = flights)
         }
+    }
+
+    // Flug eines Schülers akzeptieren/bestätigen (Instructor)
+    suspend fun approveStudentFlight(flightId: String, approved: Boolean) {
+        runCatching {
+            supabase.postgrest["flights"]
+                .update({
+                    set("instructor_approved", approved)
+                }) {
+                    filter { eq("id", flightId) }
+                }
+        }
+    }
+
+    // Flug eines Schülers bearbeiten (School-Admin)
+    suspend fun updateStudentFlight(flight: FlightModel) {
+        flightRepo.updateFlight(flight)
     }
 
     private fun generateInviteCode(): String {

@@ -89,8 +89,9 @@ fun CreateSchoolScreen(
                             name = schoolName.trim(),
                             location = schoolLocation.trim(),
                             adminUserId = currentUserId
-                        ) { success ->
-                            if (!success) errorMessage = "Fehler beim Erstellen der Schule."
+                        ) { code ->
+                            if (code != null) createdInviteCode = code
+                            else errorMessage = "Fehler beim Erstellen der Schule."
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),

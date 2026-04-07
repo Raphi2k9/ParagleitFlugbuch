@@ -21,7 +21,8 @@ data class FlightModel(
     val temperature: Int? = null,
     val notes: String = "",
     @SerialName("training_exercises") val trainingExercises: String? = null,
-    @SerialName("pruefung_bestanden") val pruefungBestanden: Boolean? = null,
-    @SerialName("created_at")       val createdAt: String? = null,
-    @SerialName("updated_at")       val updatedAt: String? = null
+    @SerialName("pruefung_bestanden")   val pruefungBestanden: Boolean? = null,
+    @SerialName("instructor_approved") val instructorApproved: Boolean? = null,
+    @SerialName("created_at")          val createdAt: String? = null,
+    @SerialName("updated_at")          val updatedAt: String? = null
 )

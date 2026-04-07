@@ -80,6 +80,28 @@
     <string name="flight_card_delete_text">Flug vom %s wirklich löschen?</string>
     <string name="flight_card_exercises">%1$d Übungen: %2$s</string>
 
+    <!-- Login -->
+    <string name="login_title">Anmelden</string>
+    <string name="login_email">E-Mail</string>
+    <string name="login_password">Passwort</string>
+    <string name="login_button">Anmelden</string>
+    <string name="login_register_prompt">Noch kein Konto? Registrieren</string>
+    <string name="login_password_show">Anzeigen</string>
+    <string name="login_password_hide">Verbergen</string>
+
+    <!-- Register -->
+    <string name="register_title">Registrieren</string>
+    <string name="register_full_name">Vollständiger Name</string>
+    <string name="register_license">Lizenznummer (optional)</string>
+    <string name="register_role">Rolle</string>
+    <string name="register_role_student">Schüler / Pilot</string>
+    <string name="register_role_instructor">Fluglehrer</string>
+    <string name="register_role_admin">Flugschule (Admin)</string>
+    <string name="register_password_confirm">Passwort bestätigen</string>
+    <string name="register_password_mismatch">Passwörter stimmen nicht überein</string>
+    <string name="register_button">Konto erstellen</string>
+    <string name="register_admin_hint">Als Flugschule kannst du nach der Registrierung deine Schule anlegen und einen Invite-Code für Schüler generieren.</string>
+
     <!-- Settings -->
     <string name="settings_title">Einstellungen</string>
     <string name="settings_pilot_section">Pilotendaten</string>

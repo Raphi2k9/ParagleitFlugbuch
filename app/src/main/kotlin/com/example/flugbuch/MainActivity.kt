@@ -16,6 +16,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import com.example.flugbuch.auth.AuthState
+import com.example.flugbuch.data.model.UserRole
 import com.example.flugbuch.navigation.NavGraph
 import com.example.flugbuch.navigation.Routes
 import com.example.flugbuch.ui.theme.FlugbuchTheme
@@ -69,9 +70,21 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            // Startdestination abhängig vom Auth-Status
+            // Startdestination abhängig vom Auth-Status und Rolle
             val startDestination = when (authState) {
-                is AuthState.LoggedIn -> Routes.FlightList.route
+                is AuthState.LoggedIn -> {
+                    val profile = (authState as AuthState.LoggedIn).profile
+                    val sid = profile.schoolId
+                    when (profile.userRole) {
+                        UserRole.SCHOOL_ADMIN ->
+                            if (sid != null) Routes.SchoolDashboard.createRoute(sid)
+                            else Routes.CreateSchool.route
+                        UserRole.INSTRUCTOR ->
+                            if (sid != null) Routes.SchoolDashboard.createRoute(sid)
+                            else Routes.FlightList.route
+                        UserRole.STUDENT -> Routes.FlightList.route
+                    }
+                }
                 is AuthState.LoggedOut, is AuthState.Error -> Routes.Login.route
                 is AuthState.Loading -> Routes.Login.route
             }
@@ -86,14 +99,30 @@ class MainActivity : ComponentActivity() {
                     // Wenn Auth-Status sich ändert, zur richtigen Destination navigieren
                     LaunchedEffect(authState) {
                         when (authState) {
-                            is AuthState.LoggedIn ->
-                                navController.navigate(Routes.FlightList.route) {
+                            is AuthState.LoggedIn -> {
+                                val profile = (authState as AuthState.LoggedIn).profile
+                                val sid = profile.schoolId
+                                val dest = when (profile.userRole) {
+                                    UserRole.SCHOOL_ADMIN ->
+                                        if (sid != null) Routes.SchoolDashboard.createRoute(sid)
+                                        else Routes.CreateSchool.route
+                                    UserRole.INSTRUCTOR ->
+                                        if (sid != null) Routes.SchoolDashboard.createRoute(sid)
+                                        else Routes.FlightList.route
+                                    UserRole.STUDENT -> Routes.FlightList.route
+                                }
+                                navController.navigate(dest) {
                                     popUpTo(Routes.Login.route) { inclusive = true }
                                 }
-                            is AuthState.LoggedOut ->
-                                navController.navigate(Routes.Login.route) {
-                                    popUpTo(0) { inclusive = true }
+                            }
+                            is AuthState.LoggedOut -> {
+                                val currentRoute = navController.currentBackStackEntry?.destination?.route
+                                if (currentRoute != Routes.Login.route && currentRoute != Routes.Register.route) {
+                                    navController.navigate(Routes.Login.route) {
+                                        popUpTo(0) { inclusive = true }
+                                    }
                                 }
+                            }
                             else -> {}
                         }
                     }

@@ -38,14 +38,18 @@ fun NavGraph(
         composable(Routes.Login.route) {
             LoginScreen(
                 viewModel = authViewModel,
-                onNavigateToRegister = { navController.navigate(Routes.Register.route) }
+                onNavigateToRegister = { navController.navigate(Routes.Register.route) },
+                language = language,
+                onLanguageChange = onLanguageChange
             )
         }
 
         composable(Routes.Register.route) {
             RegisterScreen(
                 viewModel = authViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                language = language,
+                onLanguageChange = onLanguageChange
             )
         }
 
@@ -139,7 +143,8 @@ fun NavGraph(
                 schoolViewModel = schoolViewModel,
                 authViewModel = authViewModel,
                 schoolId = schoolId,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSettings = { navController.navigate(Routes.Settings.route) }
             )
         }
 

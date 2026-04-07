@@ -10,12 +10,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.flugbuch.R
 import com.example.flugbuch.auth.AuthState
 import com.example.flugbuch.data.model.UserRole
 import com.example.flugbuch.viewmodel.AuthViewModel
@@ -24,7 +26,9 @@ import com.example.flugbuch.viewmodel.AuthViewModel
 @Composable
 fun RegisterScreen(
     viewModel: AuthViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    language: String = "de",
+    onLanguageChange: (String) -> Unit = {}
 ) {
     val authState by viewModel.authState.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -44,11 +48,31 @@ fun RegisterScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Registrieren") },
+                title = { Text(stringResource(R.string.register_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
                     }
+                },
+                actions = {
+                    TextButton(
+                        onClick = { onLanguageChange("de") },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = if (language == "de")
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) { Text("DE") }
+                    TextButton(
+                        onClick = { onLanguageChange("en") },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = if (language == "en")
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) { Text("EN") }
                 }
             )
         }
@@ -57,6 +81,7 @@ fun RegisterScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
+                .imePadding()
                 .padding(padding)
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -65,7 +90,7 @@ fun RegisterScreen(
             OutlinedTextField(
                 value = fullName,
                 onValueChange = { fullName = it; viewModel.clearError() },
-                label = { Text("Vollständiger Name") },
+                label = { Text(stringResource(R.string.register_full_name)) },
                 leadingIcon = { Icon(Icons.Default.Person, null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -75,7 +100,7 @@ fun RegisterScreen(
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it; viewModel.clearError() },
-                label = { Text("E-Mail") },
+                label = { Text(stringResource(R.string.login_email)) },
                 leadingIcon = { Icon(Icons.Default.Email, null) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 singleLine = true,
@@ -86,7 +111,7 @@ fun RegisterScreen(
             OutlinedTextField(
                 value = licenseNumber,
                 onValueChange = { licenseNumber = it },
-                label = { Text("Lizenznummer (optional)") },
+                label = { Text(stringResource(R.string.register_license)) },
                 leadingIcon = { Icon(Icons.Default.Badge, null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -99,13 +124,13 @@ fun RegisterScreen(
             ) {
                 OutlinedTextField(
                     value = when (selectedRole) {
-                        UserRole.STUDENT -> "Schüler / Pilot"
-                        UserRole.INSTRUCTOR -> "Fluglehrer"
-                        UserRole.SCHOOL_ADMIN -> "Flugschule (Admin)"
+                        UserRole.STUDENT -> stringResource(R.string.register_role_student)
+                        UserRole.INSTRUCTOR -> stringResource(R.string.register_role_instructor)
+                        UserRole.SCHOOL_ADMIN -> stringResource(R.string.register_role_admin)
                     },
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Rolle") },
+                    label = { Text(stringResource(R.string.register_role)) },
                     leadingIcon = { Icon(Icons.Default.School, null) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(roleExpanded) },
                     modifier = Modifier.fillMaxWidth().menuAnchor()
@@ -115,15 +140,15 @@ fun RegisterScreen(
                     onDismissRequest = { roleExpanded = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Schüler / Pilot") },
+                        text = { Text(stringResource(R.string.register_role_student)) },
                         onClick = { selectedRole = UserRole.STUDENT; roleExpanded = false }
                     )
                     DropdownMenuItem(
-                        text = { Text("Fluglehrer") },
+                        text = { Text(stringResource(R.string.register_role_instructor)) },
                         onClick = { selectedRole = UserRole.INSTRUCTOR; roleExpanded = false }
                     )
                     DropdownMenuItem(
-                        text = { Text("Flugschule (Admin)") },
+                        text = { Text(stringResource(R.string.register_role_admin)) },
                         onClick = { selectedRole = UserRole.SCHOOL_ADMIN; roleExpanded = false }
                     )
                 }
@@ -133,7 +158,7 @@ fun RegisterScreen(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it; viewModel.clearError() },
-                label = { Text("Passwort") },
+                label = { Text(stringResource(R.string.login_password)) },
                 leadingIcon = { Icon(Icons.Default.Lock, null) },
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -153,13 +178,13 @@ fun RegisterScreen(
             OutlinedTextField(
                 value = passwordConfirm,
                 onValueChange = { passwordConfirm = it },
-                label = { Text("Passwort bestätigen") },
+                label = { Text(stringResource(R.string.register_password_confirm)) },
                 leadingIcon = { Icon(Icons.Default.Lock, null) },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true,
                 isError = passwordMismatch,
-                supportingText = if (passwordMismatch) {{ Text("Passwörter stimmen nicht überein") }} else null,
+                supportingText = if (passwordMismatch) {{ Text(stringResource(R.string.register_password_mismatch)) }} else null,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -199,7 +224,7 @@ fun RegisterScreen(
                         strokeWidth = 2.dp
                     )
                 } else {
-                    Text("Konto erstellen")
+                    Text(stringResource(R.string.register_button))
                 }
             }
 
@@ -217,8 +242,7 @@ fun RegisterScreen(
                         Icon(Icons.Default.Info, null,
                             tint = MaterialTheme.colorScheme.onPrimaryContainer)
                         Text(
-                            "Als Flugschule kannst du nach der Registrierung " +
-                            "deine Schule anlegen und einen Invite-Code für Schüler generieren.",
+                            stringResource(R.string.register_admin_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
