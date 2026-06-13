@@ -35,12 +35,16 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private suspend fun checkSession() {
         _authState.value = AuthState.Loading
-        val profile = runCatching { authRepo.fetchCurrentProfile() }.getOrNull()
-        _authState.value = if (profile != null) {
-            AuthState.LoggedIn(profile)
-        } else {
-            AuthState.LoggedOut
+        // Erst warten bis die gespeicherte Session geladen ist,
+        // sonst wirkt der Nutzer beim App-Start immer ausgeloggt
+        runCatching { authRepo.awaitSessionLoaded() }
+        if (!authRepo.isLoggedIn) {
+            _authState.value = AuthState.LoggedOut
+            return
         }
+        val profile = runCatching { authRepo.fetchCurrentProfile() }.getOrNull()
+            ?: UserProfile(id = authRepo.currentUserId ?: "")
+        _authState.value = AuthState.LoggedIn(profile)
     }
 
     fun login(email: String, password: String) {
@@ -73,8 +77,14 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             _authState.value = AuthState.Loading
             runCatching {
                 authRepo.register(email, password, fullName, licenseNumber, role)
-                // Nach Registrierung direkt einloggen
-                authRepo.login(email, password)
+                // signUpWith mit deaktivierter E-Mail-Bestätigung loggt den Nutzer direkt ein.
+                // Falls die Bestätigung aktiv ist, ist der Nutzer nach signUpWith noch nicht eingeloggt.
+                if (!authRepo.isLoggedIn) {
+                    _authState.value = AuthState.Error(
+                        "Bitte bestätige deine E-Mail-Adresse und melde dich dann an."
+                    )
+                    return@runCatching
+                }
                 val profile = authRepo.fetchCurrentProfile()
                     ?: UserProfile(id = authRepo.currentUserId ?: "", fullName = fullName,
                                    licenseNumber = licenseNumber, role = role)
@@ -120,16 +130,31 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun refreshProfile() {
+        viewModelScope.launch {
+            val profile = runCatching { authRepo.fetchCurrentProfile() }.getOrNull() ?: return@launch
+            _authState.value = AuthState.LoggedIn(profile)
+        }
+    }
+
     // Flüge von Supabase laden und lokal cachen
     private suspend fun syncFromSupabase(userId: String) {
         runCatching {
-            val remoteFlights = supabaseFlightRepo.getFlights()
             val flightDao = db.flightDao()
-            // Alle bestehenden lokalen Flüge des Nutzers löschen, dann neu einfügen
+            // Noch nicht hochgeladene lokale Flüge zuerst nach Supabase pushen,
+            // damit sie beim Neuaufbau des lokalen Caches nicht verloren gehen
+            val failedUploads = flightDao.getUnsyncedFlights()
+                .filter { it.userId == userId }
+                .filter { supabaseFlightRepo.insertFlight(it.toFlightModel()) == null }
+            // Wirft bei Netzwerkfehlern – dann bleibt der lokale Bestand unangetastet
+            val remoteFlights = supabaseFlightRepo.getFlights()
+            // Lokale Flüge des Nutzers durch den Cloud-Stand ersetzen
             flightDao.deleteAllFlightsByUser(userId)
             remoteFlights.forEach { model ->
                 flightDao.insertFlight(FlightEntity.fromFlightModel(model))
             }
+            // Flüge, deren Upload fehlgeschlagen ist, lokal behalten
+            failedUploads.forEach { flightDao.insertFlight(it.copy(id = 0)) }
         }
     }
 }

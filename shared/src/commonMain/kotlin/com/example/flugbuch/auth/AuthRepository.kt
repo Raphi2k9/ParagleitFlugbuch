@@ -26,6 +26,12 @@ class AuthRepository {
     val isLoggedIn: Boolean
         get() = currentUser != null
 
+    // Wartet, bis die persistierte Session aus dem Speicher geladen wurde.
+    // Vorher liefert currentUserOrNull() beim Kaltstart immer null.
+    suspend fun awaitSessionLoaded() {
+        supabase.auth.awaitInitialization()
+    }
+
     // Liefert den Auth-Status als Flow (null = ausgeloggt)
     val authStateFlow: Flow<UserInfo?> = supabase.auth.sessionStatus.map { status ->
         supabase.auth.currentUserOrNull()
@@ -92,13 +98,13 @@ class AuthRepository {
                 .decodeSingleOrNull<com.example.flugbuch.data.model.School>()
         }.getOrNull() ?: return false
 
-        runCatching {
+        val updateResult = runCatching {
             supabase.postgrest["user_profiles"]
                 .update({ set("school_id", school.id) }) {
                     filter { eq("id", uid) }
                 }
         }
-        return true
+        return updateResult.isSuccess
     }
 
     // ---- Passwort zurücksetzen --------------------------------------------------

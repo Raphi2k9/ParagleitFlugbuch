@@ -38,6 +38,9 @@ fun AddEditFlightScreen(
     val scope = rememberCoroutineScope()
 
     // ── Formular-State ──────────────────────────────────────────────────────
+    // Original-Flug im Edit-Modus: userId und supabaseId müssen beim Speichern
+    // erhalten bleiben, sonst geht die Verknüpfung zur Cloud verloren
+    var originalFlight by remember { mutableStateOf<FlightEntity?>(null) }
     var selectedDateMillis by remember { mutableStateOf(System.currentTimeMillis()) }
     var gliderName by remember { mutableStateOf("") }
     var durationHours by remember { mutableStateOf("0") }
@@ -58,6 +61,7 @@ fun AddEditFlightScreen(
     LaunchedEffect(flightId) {
         if (flightId != null) {
             viewModel.getFlightById(flightId)?.let { flight ->
+                originalFlight = flight
                 selectedDateMillis = flight.date
                 gliderName = flight.gliderName
                 durationHours = (flight.durationMinutes / 60).toString()
@@ -167,7 +171,9 @@ fun AddEditFlightScreen(
             windConditions = windConditions.trim(),
             cloudCover = cloudCover.trim(),
             temperature = temperature.toIntOrNull(),
-            notes = notes.trim()
+            notes = notes.trim(),
+            userId = originalFlight?.userId ?: "",
+            supabaseId = originalFlight?.supabaseId
         )
 
         scope.launch {

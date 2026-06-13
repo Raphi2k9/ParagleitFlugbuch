@@ -35,12 +35,20 @@ fun CreateSchoolScreen(
 
     val currentUserId = (authState as? AuthState.LoggedIn)?.profile?.id ?: ""
 
+    // Beim Verlassen nach erfolgreicher Erstellung das Profil neu laden,
+    // damit school_id/Rolle aktuell sind. Nicht früher – sonst navigiert
+    // MainActivity sofort weg und der Invite-Code wäre nie sichtbar.
+    val finishAndRefresh = {
+        if (createdInviteCode != null) authViewModel.refreshProfile()
+        onNavigateBack()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Flugschule erstellen") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = finishAndRefresh) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück")
                     }
                 }
@@ -90,8 +98,11 @@ fun CreateSchoolScreen(
                             location = schoolLocation.trim(),
                             adminUserId = currentUserId
                         ) { code ->
-                            if (code != null) createdInviteCode = code
-                            else errorMessage = "Fehler beim Erstellen der Schule."
+                            if (code != null) {
+                                createdInviteCode = code
+                            } else {
+                                errorMessage = "Fehler beim Erstellen der Schule."
+                            }
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -148,7 +159,7 @@ fun CreateSchoolScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                 Button(
-                    onClick = onNavigateBack,
+                    onClick = finishAndRefresh,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Fertig")

@@ -94,12 +94,16 @@ fun parseIgc(fileContent: String): IgcFlight {
     val launch = Coords(trackPoints.first().lat, trackPoints.first().lng)
     val landing = Coords(trackPoints.last().lat, trackPoints.last().lng)
 
+    // Logger ohne Barometer schreiben 0 ins Baro-Feld – dann GPS-Höhe nutzen
+    val maxBaro = trackPoints.maxOf { it.altBaro }
+    val maxAltitude = if (maxBaro > 0) maxBaro else trackPoints.maxOf { it.altGPS }
+
     return IgcFlight(
         date = date,
         glider = glider,
         pilot = pilot,
         durationSeconds = calculateDurationSeconds(trackPoints),
-        maxAltitudeMeters = trackPoints.maxOf { it.altBaro },
+        maxAltitudeMeters = maxAltitude,
         launchCoords = launch,
         landingCoords = landing,
         trackDistanceKm = calculateTrackDistance(trackPoints),

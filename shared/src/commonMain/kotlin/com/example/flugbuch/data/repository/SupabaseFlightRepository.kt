@@ -10,14 +10,14 @@ class SupabaseFlightRepository {
     private val supabase = SupabaseClientProvider.client
 
     // Alle Flüge des aktuellen Nutzers (RLS filtert automatisch)
+    // Wirft bei Netzwerk-/Serverfehlern, damit der Aufrufer Fehler von
+    // "wirklich keine Flüge" unterscheiden kann (wichtig für den Sync!)
     suspend fun getFlights(): List<FlightModel> {
-        return runCatching {
-            supabase.postgrest["flights"]
-                .select {
-                    order("date", Order.DESCENDING)
-                }
-                .decodeList<FlightModel>()
-        }.getOrDefault(emptyList())
+        return supabase.postgrest["flights"]
+            .select {
+                order("date", Order.DESCENDING)
+            }
+            .decodeList<FlightModel>()
     }
 
     // Einzelnen Flug einfügen, gibt die erzeugte UUID zurück

@@ -156,13 +156,17 @@ class FlightViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             try {
                 val flights = repository.getAllFlightsOnce()
+                // Anführungszeichen verdoppeln und Zeilenumbrüche ersetzen,
+                // sonst zerbricht die CSV-Struktur bei Sonderzeichen im Text
+                fun esc(value: String) =
+                    "\"" + value.replace("\"", "\"\"").replace("\r", " ").replace("\n", " ") + "\""
                 val sb = StringBuilder()
                 sb.appendLine("id,date,gliderName,durationMinutes,flightType,startLocation,landingLocation,maxAltitude,distance,windConditions,cloudCover,temperature,notes")
                 flights.forEach { f ->
                     sb.appendLine(
-                        "${f.id},${f.date},\"${f.gliderName}\",${f.durationMinutes},${f.flightType}," +
-                        "\"${f.startLocation}\",\"${f.landingLocation}\",${f.maxAltitude ?: ""},${f.distance ?: ""}," +
-                        "\"${f.windConditions}\",\"${f.cloudCover}\",${f.temperature ?: ""},\"${f.notes}\""
+                        "${f.id},${f.date},${esc(f.gliderName)},${f.durationMinutes},${f.flightType}," +
+                        "${esc(f.startLocation)},${esc(f.landingLocation)},${f.maxAltitude ?: ""},${f.distance ?: ""}," +
+                        "${esc(f.windConditions)},${esc(f.cloudCover)},${f.temperature ?: ""},${esc(f.notes)}"
                     )
                 }
                 val dir = context.getExternalFilesDir(null) ?: context.filesDir

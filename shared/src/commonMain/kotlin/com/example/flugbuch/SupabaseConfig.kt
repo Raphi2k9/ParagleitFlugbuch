@@ -13,6 +13,6 @@ package com.example.flugbuch
 // ============================================================
 object SupabaseConfig {
     // TODO: Vor dem ersten Start anpassen
-    const val SUPABASE_URL = "http://192.168.86.29:54321"
+    const val SUPABASE_URL = "http://192.168.86.31:54321"
     const val SUPABASE_KEY = "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH"
 }
