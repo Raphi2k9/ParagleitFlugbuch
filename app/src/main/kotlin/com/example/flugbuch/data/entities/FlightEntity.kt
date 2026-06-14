@@ -29,7 +29,13 @@ data class FlightEntity(
 
     // Cloud-Sync Felder (neu in Version 4)
     val userId: String = "",         // Supabase User-UUID des Eigentümers
-    val supabaseId: String? = null   // UUID des Eintrags in Supabase (null = noch nicht synchronisiert)
+    val supabaseId: String? = null,  // UUID des Eintrags in Supabase (null = noch nicht synchronisiert)
+
+    // Fluglehrer-Unterschrift (neu in Version 5) – nur zur Anzeige beim Schüler,
+    // gesetzt wird sie ausschließlich vom Fluglehrer im Schul-Dashboard
+    val instructorApproved: Boolean? = null,
+    val approvedByName: String? = null,   // Anzeigename des unterschreibenden Lehrers
+    val approvedAt: String? = null        // Zeitpunkt der Unterschrift (ISO-8601)
 ) {
     // Konvertierung zu FlightModel für Supabase-Upload
     fun toFlightModel(): FlightModel = FlightModel(
@@ -70,7 +76,10 @@ data class FlightEntity(
             trainingExercises = model.trainingExercises,
             pruefungBestanden = model.pruefungBestanden,
             userId = model.userId,
-            supabaseId = model.id.ifBlank { null }
+            supabaseId = model.id.ifBlank { null },
+            instructorApproved = model.instructorApproved,
+            approvedByName = model.approvedByName,
+            approvedAt = model.approvedAt
         )
     }
 }

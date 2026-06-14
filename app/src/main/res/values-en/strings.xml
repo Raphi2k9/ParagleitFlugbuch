@@ -79,6 +79,8 @@
     <string name="flight_card_delete_title">Delete flight?</string>
     <string name="flight_card_delete_text">Really delete flight from %s?</string>
     <string name="flight_card_exercises">%1$d exercises: %2$s</string>
+    <string name="flight_card_signed_by">Signed by %1$s · %2$s</string>
+    <string name="flight_card_signed">Confirmed by instructor</string>
 
     <!-- Login -->
     <string name="login_title">Sign in</string>

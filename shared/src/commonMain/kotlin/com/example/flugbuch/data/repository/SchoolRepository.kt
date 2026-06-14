@@ -9,6 +9,8 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 class SchoolRepository {
 
@@ -78,12 +80,26 @@ class SchoolRepository {
         }
     }
 
-    // Flug eines Schülers akzeptieren/bestätigen (Instructor)
-    suspend fun approveStudentFlight(flightId: String, approved: Boolean) {
+    // Flug eines Schülers unterschreiben bzw. Unterschrift zurückziehen (Fluglehrer/Admin).
+    // Beim Unterschreiben werden Name und Zeitpunkt des Lehrers festgehalten,
+    // beim Zurückziehen alle Signatur-Felder wieder geleert.
+    suspend fun setFlightSignature(
+        flightId: String,
+        approved: Boolean,
+        instructorId: String?,
+        instructorName: String?,
+        signedAtIso: String?
+    ) {
+        val by: String? = if (approved) instructorId else null
+        val byName: String? = if (approved) instructorName else null
+        val at: String? = if (approved) signedAtIso else null
         runCatching {
             supabase.postgrest["flights"]
                 .update({
                     set("instructor_approved", approved)
+                    set("approved_by", by)
+                    set("approved_by_name", byName)
+                    set("approved_at", at)
                 }) {
                     filter { eq("id", flightId) }
                 }
@@ -93,6 +109,19 @@ class SchoolRepository {
     // Flug eines Schülers bearbeiten (School-Admin)
     suspend fun updateStudentFlight(flight: FlightModel) {
         flightRepo.updateFlight(flight)
+    }
+
+    // Mitglied aus der Schule entfernen (nur School-Admin): school_id -> NULL.
+    // Läuft über eine SECURITY-DEFINER-RPC, die die Berechtigung serverseitig
+    // prüft (Admin derselben Schule, nicht sich selbst). Die Flüge des Mitglieds
+    // bleiben in dessen eigenem Flugbuch erhalten.
+    suspend fun removeMember(userId: String): Boolean {
+        return runCatching {
+            supabase.postgrest.rpc(
+                "remove_school_member",
+                buildJsonObject { put("target_user", userId) }
+            )
+        }.isSuccess
     }
 
     private fun generateInviteCode(): String {

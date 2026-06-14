@@ -155,30 +155,30 @@ fun SettingsScreen(
                             Text("Flugschule erstellen")
                         }
                     }
-                    currentProfile.userRole == UserRole.STUDENT -> {
-                        if (currentProfile.schoolId == null) {
-                            OutlinedButton(
-                                onClick = onNavigateToJoinSchool,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Default.School, null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Flugschule beitreten")
-                            }
-                        } else {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Default.School, null,
-                                    tint = MaterialTheme.colorScheme.primary)
-                                Text("Einer Flugschule zugeordnet",
-                                    style = MaterialTheme.typography.bodyMedium)
-                            }
+                    currentProfile.schoolId == null -> {
+                        // Schüler ODER Fluglehrer ohne Schule → beitreten
+                        OutlinedButton(
+                            onClick = onNavigateToJoinSchool,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.School, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Flugschule beitreten")
                         }
                     }
-                    else -> {}
+                    else -> {
+                        // Schüler mit zugeordneter Schule
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.School, null,
+                                tint = MaterialTheme.colorScheme.primary)
+                            Text("Einer Flugschule zugeordnet",
+                                style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
                 }
 
                 HorizontalDivider()

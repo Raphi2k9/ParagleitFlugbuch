@@ -66,16 +66,35 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // Flug eines Schülers akzeptieren/ablehnen (Instructor)
-    fun approveStudentFlight(flightId: String, approved: Boolean, schoolId: String) {
+    // Flug eines Schülers unterschreiben / Unterschrift zurückziehen (Fluglehrer/Admin)
+    fun signStudentFlight(
+        flightId: String,
+        approved: Boolean,
+        instructorId: String,
+        instructorName: String,
+        schoolId: String
+    ) {
         viewModelScope.launch {
+            // Zeitpunkt der Unterschrift (UTC, ISO-8601) – Postgres timestamptz akzeptiert das
+            val signedAt = if (approved) java.time.Instant.now().toString() else null
             runCatching {
-                schoolRepo.approveStudentFlight(flightId, approved)
+                schoolRepo.setFlightSignature(
+                    flightId = flightId,
+                    approved = approved,
+                    instructorId = instructorId,
+                    instructorName = instructorName,
+                    signedAtIso = signedAt
+                )
                 // Lokale Liste aktualisieren
                 _studentsWithFlights.value = _studentsWithFlights.value.map { swf ->
                     swf.copy(
                         flights = swf.flights.map { f ->
-                            if (f.id == flightId) f.copy(instructorApproved = approved) else f
+                            if (f.id == flightId) f.copy(
+                                instructorApproved = approved,
+                                approvedBy = if (approved) instructorId else null,
+                                approvedByName = if (approved) instructorName else null,
+                                approvedAt = signedAt
+                            ) else f
                         }
                     )
                 }
@@ -101,6 +120,24 @@ class SchoolViewModel(application: Application) : AndroidViewModel(application) 
                 _error.value = "Fehler beim Speichern: ${e.message}"
             }
             _isLoading.value = false
+        }
+    }
+
+    // Mitglied aus der Schule entfernen (nur School-Admin)
+    fun removeMember(userId: String, schoolId: String) {
+        viewModelScope.launch {
+            runCatching {
+                val success = schoolRepo.removeMember(userId)
+                if (success) {
+                    // Aus der lokalen Liste entfernen
+                    _studentsWithFlights.value = _studentsWithFlights.value
+                        .filterNot { it.profile.id == userId }
+                } else {
+                    _error.value = "Mitglied konnte nicht entfernt werden."
+                }
+            }.onFailure { e ->
+                _error.value = "Fehler beim Entfernen: ${e.message}"
+            }
         }
     }
 

@@ -218,8 +218,44 @@ fun FlightCard(
                     maxLines = 2
                 )
             }
+
+            // Fluglehrer-Unterschrift (vom Cloud-Sync übernommen)
+            if (flight.instructorApproved == true) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Verified,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.tertiary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    val signer = flight.approvedByName
+                    val signedDate = formatSignatureDate(flight.approvedAt)
+                    val text = if (!signer.isNullOrBlank() && signedDate != null) {
+                        stringResource(R.string.flight_card_signed_by, signer, signedDate)
+                    } else {
+                        stringResource(R.string.flight_card_signed)
+                    }
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
         }
     }
+}
+
+// Wandelt einen ISO-8601-Zeitstempel (z. B. "2026-06-13T10:15:30Z") in "dd.MM.yyyy".
+// Der Datumsteil steht immer als yyyy-MM-dd am Anfang.
+private fun formatSignatureDate(iso: String?): String? {
+    if (iso.isNullOrBlank() || iso.length < 10) return null
+    val parts = iso.substring(0, 10).split("-")
+    if (parts.size != 3) return null
+    return "${parts[2]}.${parts[1]}.${parts[0]}"
 }
 
 @Composable

@@ -79,6 +79,8 @@
     <string name="flight_card_delete_title">Flug löschen?</string>
     <string name="flight_card_delete_text">Flug vom %s wirklich löschen?</string>
     <string name="flight_card_exercises">%1$d Übungen: %2$s</string>
+    <string name="flight_card_signed_by">Unterschrieben von %1$s · %2$s</string>
+    <string name="flight_card_signed">Vom Fluglehrer bestätigt</string>
 
     <!-- Login -->
     <string name="login_title">Anmelden</string>

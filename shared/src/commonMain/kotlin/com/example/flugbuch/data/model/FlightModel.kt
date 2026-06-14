@@ -23,6 +23,10 @@ data class FlightModel(
     @SerialName("training_exercises") val trainingExercises: String? = null,
     @SerialName("pruefung_bestanden")   val pruefungBestanden: Boolean? = null,
     @SerialName("instructor_approved") val instructorApproved: Boolean? = null,
+    // Fluglehrer-Unterschrift: wer (UUID), Anzeigename und Zeitpunkt (ISO-8601)
+    @SerialName("approved_by")         val approvedBy: String? = null,
+    @SerialName("approved_by_name")    val approvedByName: String? = null,
+    @SerialName("approved_at")         val approvedAt: String? = null,
     @SerialName("created_at")          val createdAt: String? = null,
     @SerialName("updated_at")          val updatedAt: String? = null
 )

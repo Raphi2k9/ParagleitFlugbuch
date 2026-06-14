@@ -1,5 +1,7 @@
 package com.example.flugbuch.ui.screens
 
+import android.content.Intent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,15 +17,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
+import com.example.flugbuch.data.entities.FlightType
 import com.example.flugbuch.data.model.FlightModel
 import com.example.flugbuch.data.model.StudentWithFlights
 import com.example.flugbuch.data.model.UserRole
+import com.example.flugbuch.export.FlightExcelExporter
 import com.example.flugbuch.viewmodel.AuthViewModel
 import com.example.flugbuch.viewmodel.SchoolViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -49,12 +58,36 @@ fun SchoolDashboardScreen(
     val currentRole = currentProfile?.userRole ?: UserRole.STUDENT
     val isAdmin = currentRole == UserRole.SCHOOL_ADMIN
     val isInstructor = currentRole == UserRole.INSTRUCTOR
+    // Schulpersonal (Admin + Fluglehrer) darf den Invite-Code sehen/weitergeben
+    val isStaff = isAdmin || isInstructor
 
     val clipboard = LocalClipboardManager.current
-    var showInviteCode by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     // Flight-Bearbeiten-Dialog State (Admin)
     var editingFlight by remember { mutableStateOf<FlightModel?>(null) }
+    // Flug-Detailansicht (alle Felder, schreibgeschützt)
+    var detailFlight by remember { mutableStateOf<FlightModel?>(null) }
+
+    // Alle Flüge eines Schülers als Excel-Datei exportieren und teilen
+    fun exportStudent(student: StudentWithFlights) {
+        scope.launch {
+            val file = withContext(Dispatchers.IO) {
+                runCatching {
+                    FlightExcelExporter.export(context, student.profile.fullName, student.flights)
+                }.getOrNull()
+            }
+            if (file == null) return@launch
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(shareIntent, "Flugbuch exportieren"))
+        }
+    }
 
     LaunchedEffect(schoolId) {
         schoolViewModel.loadSchoolData(schoolId)
@@ -70,6 +103,11 @@ fun SchoolDashboardScreen(
                 editingFlight = null
             }
         )
+    }
+
+    // Detail-Dialog (alle Felder eines Flugs ansehen)
+    detailFlight?.let { flight ->
+        FlightDetailDialog(flight = flight, onDismiss = { detailFlight = null })
     }
 
     Scaffold(
@@ -90,11 +128,6 @@ fun SchoolDashboardScreen(
                     }
                 },
                 actions = {
-                    if (isAdmin && inviteCode.isNotBlank()) {
-                        IconButton(onClick = { showInviteCode = !showInviteCode }) {
-                            Icon(Icons.Default.Share, "Invite-Code")
-                        }
-                    }
                     IconButton(onClick = { schoolViewModel.loadSchoolData(schoolId) }) {
                         Icon(Icons.Default.Refresh, "Aktualisieren")
                     }
@@ -134,8 +167,8 @@ fun SchoolDashboardScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Invite-Code Card (nur Admin, wenn sichtbar)
-                        if (isAdmin && showInviteCode && inviteCode.isNotBlank()) {
+                        // Invite-Code Card – für Admin UND Fluglehrer, immer sichtbar
+                        if (isStaff && inviteCode.isNotBlank()) {
                             item {
                                 Card(
                                     colors = CardDefaults.cardColors(
@@ -149,12 +182,15 @@ fun SchoolDashboardScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Column {
-                                            Text("Invite-Code",
+                                            Text("Invite-Code zum Weitergeben",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onSecondaryContainer)
                                             Text(inviteCode,
                                                 style = MaterialTheme.typography.titleLarge,
                                                 fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer)
+                                            Text("Schüler & Fluglehrer treten damit der Schule bei",
+                                                style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSecondaryContainer)
                                         }
                                         IconButton(onClick = {
@@ -203,9 +239,20 @@ fun SchoolDashboardScreen(
                                 data = studentData,
                                 isAdmin = isAdmin,
                                 isInstructor = isInstructor,
+                                onRemoveStudent = { userId ->
+                                    schoolViewModel.removeMember(userId, schoolId)
+                                },
+                                onExportStudent = { exportStudent(studentData) },
+                                onOpenDetail = { flight -> detailFlight = flight },
                                 onEditFlight = { flight -> editingFlight = flight },
-                                onApproveFlight = { flightId, approved ->
-                                    schoolViewModel.approveStudentFlight(flightId, approved, schoolId)
+                                onSignFlight = { flightId, approved ->
+                                    schoolViewModel.signStudentFlight(
+                                        flightId = flightId,
+                                        approved = approved,
+                                        instructorId = currentProfile?.id ?: "",
+                                        instructorName = currentProfile?.fullName ?: "",
+                                        schoolId = schoolId
+                                    )
                                 }
                             )
                         }
@@ -260,13 +307,41 @@ private fun StudentCard(
     data: StudentWithFlights,
     isAdmin: Boolean,
     isInstructor: Boolean,
+    onRemoveStudent: (String) -> Unit,
+    onExportStudent: () -> Unit,
+    onOpenDetail: (FlightModel) -> Unit,
     onEditFlight: (FlightModel) -> Unit,
-    onApproveFlight: (String, Boolean) -> Unit
+    onSignFlight: (String, Boolean) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var showRemoveDialog by remember { mutableStateOf(false) }
     val profile = data.profile
     val flights = data.flights
     val totalMinutes = flights.sumOf { it.durationMinutes }
+
+    if (showRemoveDialog) {
+        val name = profile.fullName.ifBlank { "dieses Mitglied" }
+        AlertDialog(
+            onDismissRequest = { showRemoveDialog = false },
+            icon = { Icon(Icons.Default.PersonRemove, null) },
+            title = { Text("Mitglied entfernen?") },
+            text = {
+                Text("$name wird aus der Flugschule entfernt und erscheint nicht mehr " +
+                    "im Dashboard. Die Flüge des Mitglieds bleiben in dessen Flugbuch erhalten.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRemoveDialog = false
+                    onRemoveStudent(profile.id)
+                }) {
+                    Text("Entfernen", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRemoveDialog = false }) { Text("Abbrechen") }
+            }
+        )
+    }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -295,12 +370,28 @@ private fun StudentCard(
                         }
                     }
                 }
-                TextButton(onClick = { expanded = !expanded }) {
-                    Text(if (expanded) "Weniger" else "${flights.size} Flüge")
-                    Icon(
-                        if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        null, modifier = Modifier.size(16.dp)
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Fluglehrer/Admin: Flüge dieses Schülers als Excel exportieren
+                    if (flights.isNotEmpty()) {
+                        IconButton(onClick = onExportStudent) {
+                            Icon(Icons.Default.Download, "Als Excel exportieren",
+                                tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                    // Admin: Mitglied aus der Schule entfernen
+                    if (isAdmin) {
+                        IconButton(onClick = { showRemoveDialog = true }) {
+                            Icon(Icons.Default.PersonRemove, "Mitglied entfernen",
+                                tint = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    TextButton(onClick = { expanded = !expanded }) {
+                        Text(if (expanded) "Weniger" else "${flights.size} Flüge")
+                        Icon(
+                            if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            null, modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
 
@@ -334,8 +425,9 @@ private fun StudentCard(
                             flight = flight,
                             isAdmin = isAdmin,
                             isInstructor = isInstructor,
+                            onOpenDetail = { onOpenDetail(flight) },
                             onEdit = { onEditFlight(flight) },
-                            onApprove = { approved -> onApproveFlight(flight.id, approved) }
+                            onSign = { approved -> onSignFlight(flight.id, approved) }
                         )
                     }
                     if (flights.size > 20) {
@@ -355,92 +447,198 @@ private fun FlightRow(
     flight: FlightModel,
     isAdmin: Boolean,
     isInstructor: Boolean,
+    onOpenDetail: () -> Unit,
     onEdit: () -> Unit,
-    onApprove: (Boolean) -> Unit
+    onSign: (Boolean) -> Unit
 ) {
     val dateStr = remember(flight.date) {
         SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(flight.date))
     }
+    val isSigned = flight.instructorApproved == true
+    // Schulpersonal (Fluglehrer und Admin) darf unterschreiben
+    val canSign = isInstructor || isAdmin
 
-    val approvedColor = when (flight.instructorApproved) {
-        true -> MaterialTheme.colorScheme.tertiary
-        false -> MaterialTheme.colorScheme.error
-        null -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f)
+                    .clickable(onClick = onOpenDetail)
+                    .padding(vertical = 2.dp)
             ) {
-                Text(dateStr, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                // Prüfungsergebnis
-                if (flight.pruefungBestanden != null) {
-                    val bestanden = flight.pruefungBestanden == true
-                    Icon(
-                        if (bestanden) Icons.Default.CheckCircle else Icons.Default.Cancel,
-                        null,
-                        modifier = Modifier.size(14.dp),
-                        tint = if (bestanden) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-            Text(
-                "${flight.startLocation.ifBlank { "?" }} → ${flight.landingLocation.ifBlank { "?" }}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(flight.flightType, style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary)
-        }
-        Column(horizontalAlignment = Alignment.End) {
-            Text("${flight.durationMinutes / 60}h ${flight.durationMinutes % 60}m",
-                style = MaterialTheme.typography.bodySmall)
-
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                // Admin: Bearbeiten-Button
-                if (isAdmin) {
-                    IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Edit, "Bearbeiten",
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.primary)
-                    }
-                }
-                // Instructor: Akzeptieren/Ablehnen
-                if (isInstructor) {
-                    val isApproved = flight.instructorApproved == true
-                    IconButton(
-                        onClick = { onApprove(!isApproved) },
-                        modifier = Modifier.size(32.dp)
-                    ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(dateStr, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    // Prüfungsergebnis
+                    if (flight.pruefungBestanden != null) {
+                        val bestanden = flight.pruefungBestanden == true
                         Icon(
-                            if (isApproved) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-                            if (isApproved) "Akzeptiert" else "Akzeptieren",
-                            modifier = Modifier.size(20.dp),
-                            tint = if (isApproved) MaterialTheme.colorScheme.tertiary
-                                   else MaterialTheme.colorScheme.onSurfaceVariant
+                            if (bestanden) Icons.Default.CheckCircle else Icons.Default.Cancel,
+                            null,
+                            modifier = Modifier.size(14.dp),
+                            tint = if (bestanden) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
                         )
                     }
+                    Icon(Icons.Default.ChevronRight, "Details ansehen",
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                // Auch Admin sieht Approve-Status (read-only Icon)
-                if (isAdmin && flight.instructorApproved != null) {
-                    val approved = flight.instructorApproved == true
-                    Icon(
-                        if (approved) Icons.Default.Verified else Icons.Default.RemoveCircleOutline,
-                        null,
-                        modifier = Modifier.size(18.dp),
-                        tint = approvedColor
-                    )
+                Text(
+                    "${flight.startLocation.ifBlank { "?" }} → ${flight.landingLocation.ifBlank { "?" }}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(flight.flightType, style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary)
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text("${flight.durationMinutes / 60}h ${flight.durationMinutes % 60}m",
+                    style = MaterialTheme.typography.bodySmall)
+
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // Admin: Bearbeiten-Button
+                    if (isAdmin) {
+                        IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.Edit, "Bearbeiten",
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                    // Fluglehrer/Admin: Unterschreiben bzw. Unterschrift zurückziehen
+                    if (canSign) {
+                        IconButton(
+                            onClick = { onSign(!isSigned) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                if (isSigned) Icons.Default.Verified else Icons.Default.RadioButtonUnchecked,
+                                if (isSigned) "Unterschrift zurückziehen" else "Unterschreiben",
+                                modifier = Modifier.size(20.dp),
+                                tint = if (isSigned) MaterialTheme.colorScheme.tertiary
+                                       else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
+            }
+        }
+
+        // Unterschrift-Zeile: wer hat wann unterschrieben
+        if (isSigned) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 4.dp)
+            ) {
+                Icon(Icons.Default.Verified, null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.tertiary)
+                val signedDate = formatSignatureDate(flight.approvedAt)
+                val label = when {
+                    !flight.approvedByName.isNullOrBlank() && signedDate != null ->
+                        "Unterschrieben von ${flight.approvedByName} · $signedDate"
+                    !flight.approvedByName.isNullOrBlank() ->
+                        "Unterschrieben von ${flight.approvedByName}"
+                    else -> "Vom Fluglehrer bestätigt"
+                }
+                Text(label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.tertiary)
             }
         }
     }
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+}
+
+// Wandelt einen ISO-8601-Zeitstempel (z. B. "2026-06-13T10:15:30Z" oder
+// "2026-06-13 10:15:30+00") in "dd.MM.yyyy" um. Der Datumsteil steht immer vorne.
+private fun formatSignatureDate(iso: String?): String? {
+    if (iso.isNullOrBlank() || iso.length < 10) return null
+    val datePart = iso.substring(0, 10) // yyyy-MM-dd
+    val parts = datePart.split("-")
+    if (parts.size != 3) return null
+    return "${parts[2]}.${parts[1]}.${parts[0]}"
+}
+
+// ---- Detail-Dialog: alle Felder eines Flugs ansehen ----------------------
+
+@Composable
+private fun FlightDetailDialog(flight: FlightModel, onDismiss: () -> Unit) {
+    val dateStr = remember(flight.date) {
+        SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(flight.date))
+    }
+    val typeLabel = FlightType.entries.find { it.name == flight.flightType }?.displayName
+        ?: flight.flightType
+    val durationStr = "${flight.durationMinutes / 60}h ${flight.durationMinutes % 60}m"
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Default.FlightTakeoff, null) },
+        title = { Text(dateStr) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                DetailRow("Flugtyp", typeLabel)
+                DetailRow("Gleitschirm", flight.gliderName)
+                DetailRow("Flugdauer", durationStr)
+                DetailRow("Startplatz", flight.startLocation)
+                DetailRow("Landeplatz", flight.landingLocation)
+                DetailRow("Max. Höhe", flight.maxAltitude?.let { "$it m" })
+                DetailRow("Distanz", flight.distance?.let { "$it km" })
+                DetailRow("Wind", flight.windConditions)
+                DetailRow("Bewölkung", flight.cloudCover)
+                DetailRow("Temperatur", flight.temperature?.let { "$it °C" })
+                DetailRow("Prüfung bestanden", when (flight.pruefungBestanden) {
+                    true -> "Ja"; false -> "Nein"; null -> null
+                })
+                DetailRow("Notizen", flight.notes)
+
+                if (flight.instructorApproved == true) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    val signedDate = formatSignatureDate(flight.approvedAt)
+                    val sig = when {
+                        !flight.approvedByName.isNullOrBlank() && signedDate != null ->
+                            "${flight.approvedByName} · $signedDate"
+                        !flight.approvedByName.isNullOrBlank() -> flight.approvedByName
+                        else -> "bestätigt"
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(Icons.Default.Verified, null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.tertiary)
+                        Text("Unterschrieben von $sig",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.tertiary)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Schließen") }
+        }
+    )
+}
+
+@Composable
+private fun DetailRow(label: String, value: String?) {
+    if (value.isNullOrBlank()) return
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("$label:",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(0.4f))
+        Text(value,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(0.6f))
+    }
 }
 
 // ---- Edit-Dialog für School-Admin ----------------------------------------
