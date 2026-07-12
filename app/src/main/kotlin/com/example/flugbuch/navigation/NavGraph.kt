@@ -151,7 +151,12 @@ fun NavGraph(
         composable(Routes.JoinSchool.route) {
             JoinSchoolScreen(
                 authViewModel = authViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onSkip = {
+                    navController.navigate(Routes.FlightList.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
 

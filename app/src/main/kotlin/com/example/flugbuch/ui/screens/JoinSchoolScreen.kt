@@ -16,7 +16,8 @@ import com.example.flugbuch.viewmodel.AuthViewModel
 @Composable
 fun JoinSchoolScreen(
     authViewModel: AuthViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onSkip: (() -> Unit)? = null
 ) {
     var inviteCode by remember { mutableStateOf("") }
     var resultMessage by remember { mutableStateOf<String?>(null) }
@@ -93,6 +94,13 @@ fun JoinSchoolScreen(
                         color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
                 } else {
                     Text("Beitreten")
+                }
+            }
+
+            if (onSkip != null) {
+                Spacer(Modifier.height(12.dp))
+                TextButton(onClick = onSkip, modifier = Modifier.fillMaxWidth()) {
+                    Text("Jetzt nicht", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

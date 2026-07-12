@@ -81,7 +81,7 @@ class MainActivity : ComponentActivity() {
                             else Routes.CreateSchool.route
                         UserRole.INSTRUCTOR ->
                             if (sid != null) Routes.SchoolDashboard.createRoute(sid)
-                            else Routes.FlightList.route
+                            else Routes.JoinSchool.route
                         UserRole.STUDENT -> Routes.FlightList.route
                     }
                 }
@@ -108,7 +108,7 @@ class MainActivity : ComponentActivity() {
                                         else Routes.CreateSchool.route
                                     UserRole.INSTRUCTOR ->
                                         if (sid != null) Routes.SchoolDashboard.createRoute(sid)
-                                        else Routes.FlightList.route
+                                        else Routes.JoinSchool.route
                                     UserRole.STUDENT -> Routes.FlightList.route
                                 }
                                 navController.navigate(dest) {
